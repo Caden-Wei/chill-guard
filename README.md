@@ -1,6 +1,8 @@
 # Chill Guard
 
-Chill Guard is a macOS desktop privacy guard. It watches the local camera feed, estimates how many people are visible, and automatically hides selected apps when the allowed-people limit is exceeded.
+[简体中文](README.zh-CN.md)
+
+Chill Guard is a small macOS app for covering your screen when you are slacking off at work. It watches the local camera feed, counts how many people are in view, and hides selected apps when too many people show up.
 
 Current status:
 
@@ -12,7 +14,7 @@ Current status:
 
 - Monitors the built-in or external camera in real time
 - Treats one person as the primary user and counts additional people in frame
-- Triggers privacy protection when visible people exceed the configured limit
+- Triggers the hide flow when visible people exceed the configured limit
 - Plays a local alert sound
 - Hides configured apps through macOS accessibility automation
 - Supports global start/stop and hold-to-mute hotkeys
@@ -26,14 +28,15 @@ Current status:
 
 ## How it works
 
-The app uses a YOLO person-detection model to detect `person` boxes only. A heuristic then selects the primary user box and counts remaining people in frame. If `visible_people > max_allowed_people`, Chill Guard triggers an alert and attempts to hide configured apps.
+The app uses a YOLO person-detection model to detect `person` boxes only. A heuristic then picks the main user box and counts everyone else in frame. If `visible_people > max_allowed_people`, Chill Guard plays an alert and tries to hide the apps in your list.
 
 ## Repository layout
 
 - `chill_guard_app.py`: main application
 - `Chill Guard.spec`: PyInstaller spec for macOS packaging
 - `packaging/build_macos_release.sh`: release build script
-- `docs/安装使用指南.md`: end-user macOS install guide
+- `docs/INSTALL.md`: end-user macOS install guide
+- `docs/INSTALL.zh-CN.md`: Chinese install guide
 - `yolo11s.pt`: default model file used by the packaged app
 - `yolo11n.pt`: lighter optional model file
 
@@ -99,4 +102,4 @@ See:
 python -m py_compile chill_guard_app.py
 ```
 
-- For user-facing behavior changes, update `docs/安装使用指南.md`
+- For user-facing behavior changes, update `docs/INSTALL.md` and `docs/INSTALL.zh-CN.md`

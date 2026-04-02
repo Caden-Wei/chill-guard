@@ -421,7 +421,7 @@ class GuardRuntime:
         self.thread = None
         self.lock = threading.Lock()
         self.running = False
-        self.status = "待机中"
+        self.status = "Standby"
         self.last_trigger_time = 0.0
         self.self_box = None
         self.self_box_misses = 0
@@ -520,12 +520,12 @@ class GuardRuntime:
             try:
                 ok, error_message = emergency_switch(blacklist_apps)
                 if ok:
-                    status_callback("警报动作已执行")
+                    status_callback("Alert action executed")
                 else:
-                    status_callback(f"警报失败: {error_message or '请检查自动化权限'}")
+                    status_callback(f"Alert failed: {error_message or 'Check Automation permission'}")
             except Exception as exc:
                 append_log(f"Alert worker failed: {exc}")
-                status_callback(f"警报失败: {exc}")
+                status_callback(f"Alert failed: {exc}")
             finally:
                 with self.alert_lock:
                     self.alert_in_flight = False
@@ -884,7 +884,7 @@ def set_launch_at_login(enabled):
 
     completed = subprocess.run(["osascript", "-e", apple_script], capture_output=True, text=True)
     if completed.returncode != 0:
-        raise RuntimeError(completed.stderr.strip() or "无法更新开机启动设置")
+        raise RuntimeError(completed.stderr.strip() or "Unable to update launch-at-login setting")
 
 
 class StatusBarController(NSObject):
@@ -902,14 +902,14 @@ class StatusBarController(NSObject):
         menu = NSMenu.alloc().init()
         menu.setTitle_("Chill Guard")
         self.menu = menu
-        show_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("显示主窗口", "showWindow:", "")
+        show_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Show Main Window", "showWindow:", "")
         show_item.setTarget_(self)
         menu.addItem_(show_item)
-        self.toggle_monitoring_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("开始监测", "toggleMonitoring:", "")
+        self.toggle_monitoring_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Start Monitoring", "toggleMonitoring:", "")
         self.toggle_monitoring_item.setTarget_(self)
         menu.addItem_(self.toggle_monitoring_item)
         menu.addItem_(NSMenuItem.separatorItem())
-        quit_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("退出", "quitApp:", "")
+        quit_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Quit", "quitApp:", "")
         quit_item.setTarget_(self)
         menu.addItem_(quit_item)
 
@@ -936,7 +936,7 @@ class StatusBarController(NSObject):
 
     def refresh_menu_state(self):
         if self.toggle_monitoring_item is not None:
-            self.toggle_monitoring_item.setTitle_("停止监测" if self.app.runtime.running else "开始监测")
+            self.toggle_monitoring_item.setTitle_("Stop Monitoring" if self.app.runtime.running else "Start Monitoring")
 
 
 def draw_debug_frame(frame, detections, self_box, self_core_box, self_buffer_box, risk_detections, cooldown_left, people_count=None):
@@ -989,17 +989,17 @@ def monitor_loop(runtime, status_callback):
     cap = None
 
     try:
-        status_callback("正在加载模型...")
+        status_callback("Loading model...")
         model = YOLO(resolve_model_path(settings.model_name))
         device_type = resolve_device()
-        status_callback(f"监测中: {device_type.upper()} / camera {settings.camera_index}")
+        status_callback(f"Monitoring: {device_type.upper()} / camera {settings.camera_index}")
 
         cap = cv2.VideoCapture(settings.camera_index, cv2.CAP_AVFOUNDATION)
         if not cap.isOpened():
-            raise RuntimeError("摄像头打不开，请检查权限、编号或是否被其他软件占用。")
+            raise RuntimeError("Cannot open the camera. Check permissions, the selected index, or whether another app is using it.")
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, settings.camera_width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, settings.camera_height)
-        status_callback("摄像头已连接")
+        status_callback("Camera connected")
 
         consecutive_count = 0
 
@@ -1009,9 +1009,9 @@ def monitor_loop(runtime, status_callback):
             try:
                 ret, frame = cap.read()
             except cv2.error as exc:
-                raise RuntimeError(f"读取摄像头画面失败: {exc}") from exc
+                raise RuntimeError(f"Failed to read a camera frame: {exc}") from exc
             if not ret:
-                raise RuntimeError("读取摄像头画面失败，请检查设备连接状态。")
+                raise RuntimeError("Failed to read a camera frame. Check the device connection state.")
 
             frame = cv2.flip(frame, 1)
             small_frame = cv2.resize(frame, (0, 0), fx=settings.frame_scale, fy=settings.frame_scale)
@@ -1111,7 +1111,7 @@ def monitor_loop(runtime, status_callback):
                 ):
                     if runtime.is_muted_until_release():
                         runtime.last_trigger_time = current_time
-                        status_callback(f"已静默: 发现 {len(risk_detections)} 个风险目标")
+                        status_callback(f"Muted: detected {len(risk_detections)} risk targets")
                         continue
 
                     if settings.alert_sound_enabled:
@@ -1120,9 +1120,9 @@ def monitor_loop(runtime, status_callback):
                     runtime.last_trigger_time = current_time
                     queued = runtime.queue_alert(settings.blacklist_apps, status_callback)
                     if queued:
-                        status_callback(f"警报触发: 当前画面 {total_people} 人 / 风险 {len(risk_detections)}")
+                        status_callback(f"Alert triggered: current frame {total_people} people / risk {len(risk_detections)}")
                     else:
-                        status_callback(f"警报处理中: 当前画面 {total_people} 人 / 风险 {len(risk_detections)}")
+                        status_callback(f"Alert already in progress: current frame {total_people} people / risk {len(risk_detections)}")
             else:
                 consecutive_count = 0
 
@@ -1143,7 +1143,7 @@ def monitor_loop(runtime, status_callback):
 
     except Exception as exc:
         append_log(f"Monitor loop error: {exc}")
-        status_callback(f"监测已停止: {exc}")
+        status_callback(f"Monitoring stopped: {exc}")
     finally:
         runtime.running = False
         runtime.stop_event.clear()
@@ -1157,13 +1157,13 @@ def monitor_loop(runtime, status_callback):
 class ChillGuardApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Chill Guard 控制台")
+        self.root.title("Chill Guard Console")
         self.root.geometry("760x460")
         self.root.minsize(760, 460)
         self.runtime = GuardRuntime()
         self.ui_task_queue = queue.Queue()
         self.ui_task_polling = True
-        self.status_var = tk.StringVar(value="待机中")
+        self.status_var = tk.StringVar(value="Standby")
         self.preview_image = None
         self.hotkey_event_tap = None
         self.hotkey_run_loop = None
@@ -1196,7 +1196,7 @@ class ChillGuardApp:
         self.hotkey_capture_timeout_id = None
         self.default_settings = GuardSettings()
         self.status_bar_controller = None
-        self.hotkey_status_var = tk.StringVar(value="正在检查全局快捷键权限...")
+        self.hotkey_status_var = tk.StringVar(value="Checking global hotkey permission...")
         self.launch_at_login_var = tk.BooleanVar(value=False)
         self.parameters_expanded_var = tk.BooleanVar(value=False)
         self.hotkeys_expanded_var = tk.BooleanVar(value=False)
@@ -1212,20 +1212,20 @@ class ChillGuardApp:
         self.preview_row = None
         self.blacklist_chip_container = None
         self.blacklist_helper_var = tk.StringVar(value="")
-        self.status_caption_var = tk.StringVar(value="状态: 待机中")
-        self.status_detail_var = tk.StringVar(value="准备就绪，等待你开始监测。")
-        self.status_pill_var = tk.StringVar(value="待机")
+        self.status_caption_var = tk.StringVar(value="Status: Standby")
+        self.status_detail_var = tk.StringVar(value="Ready. Start monitoring when you are set.")
+        self.status_pill_var = tk.StringVar(value="Standby")
         self.status_caption_label = None
         self.status_detail_label = None
         self.status_pill_label = None
         self.status_dot = None
         self.hotkey_hint_var = tk.StringVar(value="")
         self.settings_summary_var = tk.StringVar(value="")
-        self.hotkey_compact_var = tk.StringVar(value="权限检查中")
+        self.hotkey_compact_var = tk.StringVar(value="Checking permissions")
         self.startup_summary_var = tk.StringVar(value="")
-        self.preview_chip_people_var = tk.StringVar(value="人数 --")
-        self.preview_chip_limit_var = tk.StringVar(value="允许 1")
-        self.preview_chip_state_var = tk.StringVar(value="待机")
+        self.preview_chip_people_var = tk.StringVar(value="People --")
+        self.preview_chip_limit_var = tk.StringVar(value="Allowed 1")
+        self.preview_chip_state_var = tk.StringVar(value="Standby")
         self.latest_people_count = None
         self.monitor_mode_var = tk.StringVar(value="basic")
         self.monitor_mode_hint_var = tk.StringVar(value="")
@@ -1303,20 +1303,20 @@ class ChillGuardApp:
         primary_actions.pack(fill="x")
         primary_actions.columnconfigure(0, weight=1)
         primary_actions.columnconfigure(1, weight=1)
-        ttk.Button(primary_actions, text="开始监测", command=self.start_monitoring, style="PrimaryAction.TButton").grid(
+        ttk.Button(primary_actions, text="Start Monitoring", command=self.start_monitoring, style="PrimaryAction.TButton").grid(
             row=0, column=0, sticky="ew", padx=(0, 6)
         )
-        ttk.Button(primary_actions, text="停止监测", command=self.stop_monitoring, style="DangerAction.TButton").grid(
+        ttk.Button(primary_actions, text="Stop Monitoring", command=self.stop_monitoring, style="DangerAction.TButton").grid(
             row=0, column=1, sticky="ew", padx=(6, 0)
         )
         secondary_actions = ttk.Frame(quick_actions, style="SurfaceCard.TFrame")
         secondary_actions.pack(fill="x", pady=(6, 0))
         secondary_actions.columnconfigure(0, weight=1)
         secondary_actions.columnconfigure(1, weight=1)
-        ttk.Button(secondary_actions, text="应用设置", command=self.apply_settings, style="Utility.TButton").grid(
+        ttk.Button(secondary_actions, text="Apply Settings", command=self.apply_settings, style="Utility.TButton").grid(
             row=0, column=0, sticky="ew", padx=(0, 6)
         )
-        ttk.Button(secondary_actions, text="恢复默认", command=self.reset_defaults, style="Utility.TButton").grid(
+        ttk.Button(secondary_actions, text="Reset Defaults", command=self.reset_defaults, style="Utility.TButton").grid(
             row=0, column=1, sticky="ew", padx=(6, 0)
         )
 
@@ -1333,7 +1333,7 @@ class ChillGuardApp:
         segment_rail.columnconfigure(1, weight=1)
         segment_rail.columnconfigure(2, weight=1)
         self.panel_buttons = {}
-        for index, (name, label) in enumerate((("parameters", "监测设置"), ("hotkeys", "快捷键"), ("startup", "启动与隐藏"))):
+        for index, (name, label) in enumerate((("parameters", "Detection"), ("hotkeys", "Hotkeys"), ("startup", "Startup & Hiding"))):
             button = ttk.Button(
                 segment_rail,
                 text=label,
@@ -1386,7 +1386,7 @@ class ChillGuardApp:
         self.preview_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(
             basic_toggles_row,
-            text="开启预览",
+            text="Enable Preview",
             variable=self.preview_var,
             command=self.on_preview_toggled,
             style="Toggle.TCheckbutton",
@@ -1394,14 +1394,14 @@ class ChillGuardApp:
         self.alert_sound_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(
             basic_toggles_row,
-            text="风险提示音",
+            text="Alert Sound",
             variable=self.alert_sound_var,
             command=self.apply_settings,
             style="Toggle.TCheckbutton",
         ).pack(side="left", padx=(14, 0))
         self.parameters_toggle_button = ttk.Button(
             basic_toggles_row,
-            text="高级参数",
+            text="Advanced",
             command=self.show_monitor_advanced_view,
             style="PillSecondary.TButton",
         )
@@ -1409,7 +1409,7 @@ class ChillGuardApp:
 
         model_row = ttk.Frame(self.monitor_basic_frame, style="InsetPanel.TFrame")
         model_row.pack(fill="x", pady=(12, 0))
-        ttk.Label(model_row, text="模型文件", style="FieldHeader.TLabel").pack(side="left")
+        ttk.Label(model_row, text="Model File", style="FieldHeader.TLabel").pack(side="left")
         self.model_var = tk.StringVar(value="yolo11n.pt")
         ttk.Entry(model_row, textvariable=self.model_var, width=22).pack(side="left", padx=(10, 0))
 
@@ -1420,14 +1420,14 @@ class ChillGuardApp:
         add_field_grid(
             basic_form,
             [
-                ("允许人数", "max_allowed_people", "1"),
-                ("摄像头编号", "camera_index", "0"),
-                ("画面缩放", "frame_scale", "1.0"),
-                ("检测尺寸", "detect_imgsz", "1280"),
-                ("置信度阈值", "confidence_threshold", "0.30"),
-                ("触发帧数", "trigger_frame_threshold", "1"),
-                ("最小目标面积", "min_risk_box_area_ratio", "0.002"),
-                ("冷却时间(秒)", "cooldown_seconds", "2"),
+                ("Allowed People", "max_allowed_people", "1"),
+                ("Camera Index", "camera_index", "0"),
+                ("Frame Scale", "frame_scale", "1.0"),
+                ("Detect Size", "detect_imgsz", "1280"),
+                ("Confidence Threshold", "confidence_threshold", "0.30"),
+                ("Trigger Frames", "trigger_frame_threshold", "1"),
+                ("Minimum Target Area", "min_risk_box_area_ratio", "0.002"),
+                ("Cooldown (s)", "cooldown_seconds", "2"),
             ],
         )
 
@@ -1439,14 +1439,14 @@ class ChillGuardApp:
         self.far_target_boost_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(
             advanced_toggles,
-            text="开启远距增强",
+            text="Enable Long-Range Boost",
             variable=self.far_target_boost_var,
             command=self.apply_settings,
             style="Toggle.TCheckbutton",
         ).pack(side="left")
         ttk.Button(
             advanced_toggles,
-            text="返回基础",
+            text="Back to Basics",
             command=self.show_monitor_basic_view,
             style="PillSecondary.TButton",
         ).pack(side="right")
@@ -1458,12 +1458,12 @@ class ChillGuardApp:
         add_field_grid(
             advanced_form,
             [
-                ("本人左/右扩张", "self_box_expand_x", "0.28"),
-                ("本人上扩张", "self_box_expand_y_top", "0.18"),
-                ("本人下扩张", "self_box_expand_y_bottom", "0.10"),
-                ("本人最小锁定置信度", "self_track_min_confidence", "0.35"),
-                ("人像跟踪容错帧数", "self_track_max_misses", "18"),
-                ("远距增强阈值", "far_target_confidence", "0.18"),
+                ("Self Expand Left/Right", "self_box_expand_x", "0.28"),
+                ("Self Expand Top", "self_box_expand_y_top", "0.18"),
+                ("Self Expand Bottom", "self_box_expand_y_bottom", "0.10"),
+                ("Self Lock Min Confidence", "self_track_min_confidence", "0.35"),
+                ("Self Tracking Miss Tolerance", "self_track_max_misses", "18"),
+                ("Long-Range Boost Threshold", "far_target_confidence", "0.18"),
             ],
         )
 
@@ -1472,19 +1472,19 @@ class ChillGuardApp:
         self.panel_frames["hotkeys"] = hotkey_body
         hotkey_body.columnconfigure(1, weight=1)
         ttk.Label(hotkey_body, textvariable=self.hotkey_compact_var, style="CardBodyMuted.TLabel").grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 10))
-        ttk.Label(hotkey_body, text="开启/关闭", style="FieldHeader.TLabel").grid(row=1, column=0, sticky="w", pady=(0, 8))
+        ttk.Label(hotkey_body, text="Start / Stop", style="FieldHeader.TLabel").grid(row=1, column=0, sticky="w", pady=(0, 8))
         self.start_stop_hotkey_var = tk.StringVar(value=self.default_settings.start_stop_hotkey)
         self.start_stop_hotkey_entry = ttk.Entry(hotkey_body, textvariable=self.start_stop_hotkey_var, state="readonly")
         self.start_stop_hotkey_entry.grid(row=1, column=1, sticky="ew", padx=(0, 8), pady=(0, 8))
-        ttk.Button(hotkey_body, text="录制", command=lambda: self.begin_hotkey_capture("start_stop"), style="PillSecondary.TButton").grid(row=1, column=2, pady=(0, 8))
-        ttk.Label(hotkey_body, text="按住静默", style="FieldHeader.TLabel").grid(row=2, column=0, sticky="w")
+        ttk.Button(hotkey_body, text="Capture", command=lambda: self.begin_hotkey_capture("start_stop"), style="PillSecondary.TButton").grid(row=1, column=2, pady=(0, 8))
+        ttk.Label(hotkey_body, text="Hold to Mute", style="FieldHeader.TLabel").grid(row=2, column=0, sticky="w")
         self.mute_hold_hotkey_var = tk.StringVar(value=self.default_settings.mute_hold_hotkey)
         self.mute_hold_hotkey_entry = ttk.Entry(hotkey_body, textvariable=self.mute_hold_hotkey_var, state="readonly")
         self.mute_hold_hotkey_entry.grid(row=2, column=1, sticky="ew", padx=(0, 8))
-        ttk.Button(hotkey_body, text="录制", command=lambda: self.begin_hotkey_capture("mute_hold"), style="PillSecondary.TButton").grid(row=2, column=2)
+        ttk.Button(hotkey_body, text="Capture", command=lambda: self.begin_hotkey_capture("mute_hold"), style="PillSecondary.TButton").grid(row=2, column=2)
         ttk.Label(hotkey_body, textvariable=self.hotkey_hint_var, style="Muted.TLabel", wraplength=320).grid(row=3, column=0, columnspan=3, sticky="w", pady=(12, 6))
-        ttk.Button(hotkey_body, text="重试挂载监听", command=self.retry_hotkey_listener, style="PillSecondary.TButton").grid(row=4, column=1, sticky="e", padx=(0, 8))
-        ttk.Button(hotkey_body, text="打开辅助功能设置", command=self.open_accessibility_settings, style="PillSecondary.TButton").grid(row=4, column=2, sticky="e")
+        ttk.Button(hotkey_body, text="Retry Listener Attach", command=self.retry_hotkey_listener, style="PillSecondary.TButton").grid(row=4, column=1, sticky="e", padx=(0, 8))
+        ttk.Button(hotkey_body, text="Open Accessibility Settings", command=self.open_accessibility_settings, style="PillSecondary.TButton").grid(row=4, column=2, sticky="e")
 
         startup_body = ttk.Frame(switcher_body, style="InsetPanel.TFrame")
         startup_body.grid(row=0, column=0, sticky="nsew")
@@ -1492,12 +1492,12 @@ class ChillGuardApp:
         ttk.Label(startup_body, textvariable=self.startup_summary_var, style="CardBodyMuted.TLabel").pack(anchor="w", pady=(0, 10))
         ttk.Checkbutton(
             startup_body,
-            text="开机自动启动 Chill Guard",
+            text="Launch Chill Guard at Login",
             variable=self.launch_at_login_var,
             command=self.on_launch_at_login_toggled,
             style="Toggle.TCheckbutton",
         ).pack(anchor="w")
-        ttk.Label(startup_body, text="需要隐藏的软件名", style="FieldHeader.TLabel").pack(anchor="w", pady=(10, 0))
+        ttk.Label(startup_body, text="Apps to Hide", style="FieldHeader.TLabel").pack(anchor="w", pady=(10, 0))
         ttk.Label(startup_body, textvariable=self.blacklist_helper_var, style="Muted.TLabel").pack(anchor="w", pady=(0, 6))
         self.blacklist_text = scrolledtext.ScrolledText(startup_body, height=4, relief="flat", borderwidth=0)
         self.blacklist_text.pack(fill="both", expand=True)
@@ -1514,7 +1514,7 @@ class ChillGuardApp:
         preview_top.columnconfigure(0, weight=1)
         preview_left = ttk.Frame(preview_top, style="SurfaceCard.TFrame")
         preview_left.grid(row=0, column=0, sticky="w")
-        ttk.Label(preview_left, text="实时预览", style="CardTitle.TLabel").pack(side="left")
+        ttk.Label(preview_left, text="Live Preview", style="CardTitle.TLabel").pack(side="left")
         preview_chips = ttk.Frame(preview_top, style="SurfaceCard.TFrame")
         preview_chips.grid(row=0, column=1, sticky="e")
         ttk.Label(preview_chips, textvariable=self.preview_chip_people_var, style="InfoChipNeutral.TLabel", padding=(10, 5)).pack(side="left")
@@ -1522,7 +1522,7 @@ class ChillGuardApp:
         ttk.Label(preview_chips, textvariable=self.preview_chip_state_var, style="InfoChipOk.TLabel", padding=(10, 5)).pack(side="left", padx=(8, 0))
         self.preview_label = ttk.Label(
             preview_frame,
-            text="开启监测后，实时预览将在这里显示。",
+            text="Preview will appear here after monitoring starts.",
             anchor="center",
             justify="center",
             style="PreviewPlaceholder.TLabel",
@@ -1536,7 +1536,7 @@ class ChillGuardApp:
     def set_status(self, message):
         append_log(f"STATUS: {message}")
         self.status_var.set(message)
-        self.status_caption_var.set(f"状态: {message}")
+        self.status_caption_var.set(f"Status: {message}")
         self.status_detail_var.set(self.status_detail_for_message(message))
         self.update_status_indicator(message)
         self.update_runtime_chips(message)
@@ -1558,26 +1558,26 @@ class ChillGuardApp:
             self.status_detail_label.configure(wraplength=available_width)
 
     def status_detail_for_message(self, message):
-        if "监测中" in message or "监测启动中" in message:
-            return "摄像头和模型已经接管，正在持续分析周围环境。"
-        if "警报触发" in message:
-            return "检测到风险目标，系统已开始执行提醒或隐藏动作。"
-        if "静默" in message:
-            return "当前处于临时静默状态，松开快捷键后会自动恢复。"
-        if "失败" in message or "停止" in message:
-            return "这一轮监测没有继续运行，可以先检查权限或设备状态。"
-        if "设置已应用" in message:
-            return "新的参数已经保存，下次打开也会自动沿用。"
-        return "准备就绪，等待你开始监测。"
+        if "Monitoring:" in message or "Starting monitoring" in message:
+            return "Camera and model are active and analyzing the scene."
+        if "Alert triggered" in message:
+            return "Risk condition detected. Chill Guard is executing the protection flow."
+        if "Muted" in message or "mute" in message.lower():
+            return "Temporary mute is active. Release the hotkey to resume alerts."
+        if "failed" in message.lower() or "stopped" in message.lower():
+            return "This monitoring session is not running. Check permissions or device state."
+        if "Settings applied" in message:
+            return "Settings were saved and will be reused next launch."
+        return "Ready. Start monitoring when you are set."
 
     def update_status_indicator(self, message):
         if self.status_dot is None:
             return
-        if "警报触发" in message:
+        if "Alert triggered" in message:
             color = "#ef4444"
-        elif "监测中" in message or "监测启动中" in message:
+        elif "Monitoring:" in message or "Starting monitoring" in message:
             color = "#22c55e"
-        elif "失败" in message or "停止" in message:
+        elif "failed" in message.lower() or "stopped" in message.lower():
             color = "#f59e0b"
         else:
             color = "#60a5fa"
@@ -1836,18 +1836,18 @@ class ChillGuardApp:
         if self.monitor_basic_frame is not None:
             self.monitor_basic_frame.tkraise()
         if self.parameters_toggle_button is not None:
-            self.parameters_toggle_button.configure(text="高级参数", command=self.show_monitor_advanced_view)
+            self.parameters_toggle_button.configure(text="Advanced", command=self.show_monitor_advanced_view)
         self.monitor_mode_var.set("basic")
-        self.monitor_mode_hint_var.set("基础设置：高频参数和模型配置")
+        self.monitor_mode_hint_var.set("Basic settings: frequent parameters and model configuration")
         self.refresh_form_summaries()
 
     def show_monitor_advanced_view(self):
         if self.monitor_advanced_frame is not None:
             self.monitor_advanced_frame.tkraise()
         if self.parameters_toggle_button is not None:
-            self.parameters_toggle_button.configure(text="返回基础", command=self.show_monitor_basic_view)
+            self.parameters_toggle_button.configure(text="Back to Basics", command=self.show_monitor_basic_view)
         self.monitor_mode_var.set("advanced")
-        self.monitor_mode_hint_var.set("高级设置：忽略区、跟踪容错和远距增强")
+        self.monitor_mode_hint_var.set("Advanced settings: ignore zones, tracking tolerance, and long-range boost")
         self.refresh_form_summaries()
 
     def switch_settings_panel(self, name):
@@ -1882,10 +1882,10 @@ class ChillGuardApp:
         if section["var"].get():
             if body.winfo_manager() != "pack":
                 body.pack(fill="x", pady=(14, 0))
-            button.configure(text="收起")
+            button.configure(text="Collapse")
         else:
             body.pack_forget()
-            button.configure(text="展开")
+            button.configure(text="Expand")
 
     def update_all_section_visibility(self):
         for name in self.collapsible_sections:
@@ -1894,18 +1894,18 @@ class ChillGuardApp:
     def refresh_form_summaries(self):
         max_people = self.entries.get("max_allowed_people").get().strip() if self.entries else "1"
         model_name = self.model_var.get().strip() if hasattr(self, "model_var") else "yolo11s.pt"
-        preview_state = "预览开" if hasattr(self, "preview_var") and self.preview_var.get() else "预览关"
-        mode_text = "高级参数" if self.monitor_mode_var.get() == "advanced" else "基础参数"
-        self.settings_summary_var.set(f"{mode_text} · {model_name} · 允许 {max_people} 人 · {preview_state}")
+        preview_state = "Preview on" if hasattr(self, "preview_var") and self.preview_var.get() else "Preview off"
+        mode_text = "Advanced" if self.monitor_mode_var.get() == "advanced" else "Basic"
+        self.settings_summary_var.set(f"{mode_text} · {model_name} · Allowed {max_people} · {preview_state}")
 
         if has_accessibility_permission():
-            self.hotkey_compact_var.set("已授权，可以直接录制或替换快捷键。")
+            self.hotkey_compact_var.set("Authorized. You can capture or replace hotkeys now.")
         else:
-            self.hotkey_compact_var.set("未授权，当前快捷键不会生效。")
+            self.hotkey_compact_var.set("Not authorized. Global hotkeys will not work yet.")
 
         blacklist_count = len(self.get_blacklist_items()) if self.blacklist_text is not None else 0
-        launch_text = "开机启动开" if self.launch_at_login_var.get() else "开机启动关"
-        self.startup_summary_var.set(f"{launch_text}  · 隐藏 {blacklist_count} 个应用")
+        launch_text = "Launch at login on" if self.launch_at_login_var.get() else "Launch at login off"
+        self.startup_summary_var.set(f"{launch_text} · Hide {blacklist_count} apps")
         self.update_runtime_chips()
 
     def update_runtime_chips(self, message=None):
@@ -1917,36 +1917,36 @@ class ChillGuardApp:
         if live_people_count is not None:
             self.latest_people_count = int(live_people_count)
         else:
-            match = re.search(r"当前画面\s*(\d+)\s*人", text)
+            match = re.search(r"current frame\s*(\d+)\s*people", text, re.IGNORECASE)
             if match:
                 self.latest_people_count = int(match.group(1))
-            elif any(keyword in text for keyword in ("待机", "停止", "失败")):
+            elif any(keyword in text for keyword in ("Standby", "stopped", "failed")):
                 self.latest_people_count = None
 
         if self.latest_people_count is None:
-            self.preview_chip_people_var.set("人数 --")
+            self.preview_chip_people_var.set("People --")
         else:
-            self.preview_chip_people_var.set(f"人数 {self.latest_people_count}")
+            self.preview_chip_people_var.set(f"People {self.latest_people_count}")
 
         if self.entries and "max_allowed_people" in self.entries:
             limit_text = self.entries["max_allowed_people"].get().strip() or "1"
-            self.preview_chip_limit_var.set(f"允许 {limit_text}")
+            self.preview_chip_limit_var.set(f"Allowed {limit_text}")
 
-        if "警报" in text:
-            self.preview_chip_state_var.set("告警中")
-            self.status_pill_var.set("告警")
-        elif "监测中" in text or "监测启动中" in text:
-            self.preview_chip_state_var.set("监测中")
-            self.status_pill_var.set("运行中")
-        elif "静默" in text:
-            self.preview_chip_state_var.set("静默")
-            self.status_pill_var.set("静默")
-        elif "失败" in text:
-            self.preview_chip_state_var.set("异常")
-            self.status_pill_var.set("异常")
+        if "Alert" in text:
+            self.preview_chip_state_var.set("Alerting")
+            self.status_pill_var.set("Alert")
+        elif "Monitoring:" in text or "Starting monitoring" in text:
+            self.preview_chip_state_var.set("Monitoring")
+            self.status_pill_var.set("Running")
+        elif "Muted" in text or "mute" in text.lower():
+            self.preview_chip_state_var.set("Muted")
+            self.status_pill_var.set("Muted")
+        elif "failed" in text.lower():
+            self.preview_chip_state_var.set("Error")
+            self.status_pill_var.set("Error")
         else:
-            self.preview_chip_state_var.set("待机")
-            self.status_pill_var.set("待机")
+            self.preview_chip_state_var.set("Standby")
+            self.status_pill_var.set("Standby")
         self.update_status_layout()
 
     def get_blacklist_items(self):
@@ -1959,9 +1959,9 @@ class ChillGuardApp:
     def render_blacklist_chips(self):
         items = self.get_blacklist_items() if self.blacklist_text is not None else []
         self.blacklist_helper_var.set(
-            "每行一个应用名。命中风险时会尝试隐藏这些程序。"
+            "One app name per line. Chill Guard will try to hide these apps when risk is detected."
             if items
-            else "请至少保留一个应用名。"
+            else "Keep at least one app name."
         )
         if self.blacklist_chip_container is None:
             return
@@ -1997,28 +1997,28 @@ class ChillGuardApp:
         if self.hotkey_listener_active:
             source_label = self.describe_hotkey_listener_sources()
             if permission_granted:
-                self.hotkey_status_var.set(f"全局快捷键已启用（{source_label}）")
-                self.hotkey_hint_var.set(f"当前授权对象: {target_label}")
+                self.hotkey_status_var.set(f"Global hotkeys enabled ({source_label})")
+                self.hotkey_hint_var.set(f"Current authorized target: {target_label}")
             else:
                 if running_temp_bundle:
-                    self.hotkey_status_var.set("当前测试包位于临时目录，全局快捷键还没有拿到这份应用的辅助功能权限")
-                    self.hotkey_hint_var.set(f"请在辅助功能里重新勾选这一路径: {app_bundle_path()}")
+                    self.hotkey_status_var.set("This test bundle is in a temporary directory and does not have Accessibility permission yet")
+                    self.hotkey_hint_var.set(f"Re-enable this exact path in Accessibility: {app_bundle_path()}")
                 else:
-                    self.hotkey_status_var.set("监听已挂载，但当前这份应用仍未被系统判定为已授权")
-                    self.hotkey_hint_var.set(f"请确认辅助功能里勾选的是当前这份应用: {app_bundle_path()}")
+                    self.hotkey_status_var.set("The listener is attached, but macOS still does not consider this app authorized")
+                    self.hotkey_hint_var.set(f"Confirm Accessibility is enabled for this app: {app_bundle_path()}")
         elif permission_granted:
-            self.hotkey_status_var.set("辅助功能已授权，正在重试挂载全局监听")
-            self.hotkey_hint_var.set(f"当前授权对象: {target_label}（若仍无效可点“重试挂载监听”）")
+            self.hotkey_status_var.set("Accessibility is authorized. Retrying global listener attach")
+            self.hotkey_hint_var.set(f"Current authorized target: {target_label} (if it still fails, click “Retry Listener Attach”)")
         else:
             if running_temp_bundle:
-                self.hotkey_status_var.set("当前测试包位于临时目录，需要重新授予这份应用辅助功能权限")
-                self.hotkey_hint_var.set(f"请确认勾选的是临时测试包: {app_bundle_path()}")
+                self.hotkey_status_var.set("This test bundle is in a temporary directory and needs its own Accessibility permission")
+                self.hotkey_hint_var.set(f"Confirm the temporary test app is checked: {app_bundle_path()}")
             elif running_from_bundle():
-                self.hotkey_status_var.set("全局快捷键不可用：请给 Chill Guard.app 辅助功能权限")
-                self.hotkey_hint_var.set(f"请确认勾选的是当前这份应用: {app_bundle_path()}")
+                self.hotkey_status_var.set("Global hotkeys unavailable: grant Accessibility permission to Chill Guard.app")
+                self.hotkey_hint_var.set(f"Confirm the checked app is this one: {app_bundle_path()}")
             else:
-                self.hotkey_status_var.set("全局快捷键不可用：源码模式下需要给当前 Python 辅助功能权限")
-                self.hotkey_hint_var.set(f"请在辅助功能里勾选: {target_path}")
+                self.hotkey_status_var.set("Global hotkeys unavailable: source mode requires Accessibility permission for the current Python")
+                self.hotkey_hint_var.set(f"Enable this target in Accessibility: {target_path}")
         self.refresh_form_summaries()
         self.root.after(2500, self.refresh_hotkey_status)
 
@@ -2027,9 +2027,9 @@ class ChillGuardApp:
         self.restart_hotkey_listener(force=True)
         self.refresh_hotkey_status()
         if permission_granted:
-            self.set_status("已手动重试挂载全局快捷键监听")
+            self.set_status("Retried global hotkey listener attach")
         else:
-            self.set_status("已手动重试挂载监听；若仍不可用请确认辅助功能里勾选的是当前这份应用")
+            self.set_status("Retried listener attach. If it still fails, confirm Accessibility is enabled for this app")
 
     def open_accessibility_settings(self):
         request_accessibility_permission()
@@ -2038,9 +2038,9 @@ class ChillGuardApp:
             check=False,
         )
         if running_from_bundle():
-            self.set_status("已打开辅助功能设置，请勾选 Chill Guard")
+            self.set_status("Opened Accessibility settings. Enable Chill Guard there")
         else:
-            self.set_status("已打开辅助功能设置，请勾选 Python 或终端")
+            self.set_status("Opened Accessibility settings. Enable Python or Terminal there")
 
     def show_main_window(self):
         append_log("show_main_window requested")
@@ -2051,7 +2051,7 @@ class ChillGuardApp:
     def hide_main_window(self):
         append_log("hide_main_window requested")
         self.root.withdraw()
-        self.set_status("主窗口已隐藏，可从菜单栏图标重新打开")
+        self.set_status("Main window hidden. Reopen it from the menu bar icon")
 
     def on_window_mapped(self, event):
         if event.widget is self.root:
@@ -2070,31 +2070,31 @@ class ChillGuardApp:
             set_launch_at_login(self.launch_at_login_var.get())
             self.apply_settings()
             self.refresh_form_summaries()
-            self.set_status("开机启动设置已更新")
+            self.set_status("Launch-at-login setting updated")
         except RuntimeError as exc:
             self.launch_at_login_var.set(not self.launch_at_login_var.get())
-            messagebox.showerror("开机启动设置失败", str(exc))
+            messagebox.showerror("Launch-at-login update failed", str(exc))
 
     def test_alert_sound(self):
         play_alert_sound()
-        self.set_status("已播放测试提示音")
+        self.set_status("Played the test alert sound")
 
     def test_temporary_mute(self):
         self.runtime.set_muted_until_release(True)
-        self.set_status("测试静默已开启，5 秒后自动恢复")
+        self.set_status("Temporary mute test enabled. It will auto-clear in 5 seconds")
         self.root.after(5000, self.end_temporary_mute_test)
 
     def end_temporary_mute_test(self):
         self.runtime.set_muted_until_release(False)
-        self.set_status("测试静默已结束")
+        self.set_status("Temporary mute test cleared")
 
     def test_emergency_switch(self):
         settings = self.runtime.get_settings()
         ok, error_message = emergency_switch(settings.blacklist_apps)
         if ok:
-            self.set_status("测试隐藏应用已执行")
+            self.set_status("Test app hide executed")
         else:
-            self.set_status(f"测试隐藏失败: {error_message or '请检查自动化权限'}")
+            self.set_status(f"Test app hide failed: {error_message or 'Check Automation permission'}")
 
     def parse_settings(self):
         try:
@@ -2127,26 +2127,26 @@ class ChillGuardApp:
                 launch_at_login=self.launch_at_login_var.get(),
             )
         except ValueError as exc:
-            raise ValueError("有参数格式不对，请检查数字输入。") from exc
+            raise ValueError("Some parameters are invalid. Check the numeric fields.") from exc
 
         if not 0.1 <= settings.frame_scale <= 1.0:
-            raise ValueError("画面缩放建议在 0.1 到 1.0 之间。")
+            raise ValueError("Frame scale should be between 0.1 and 1.0.")
         if not 0.05 <= settings.confidence_threshold <= 1.0:
-            raise ValueError("置信度阈值建议在 0.05 到 1.0 之间。")
+            raise ValueError("Confidence threshold should be between 0.05 and 1.0.")
         if not 320 <= settings.detect_imgsz <= 1600:
-            raise ValueError("检测尺寸 imgsz 建议在 320 到 1600 之间。")
+            raise ValueError("Detect size should be between 320 and 1600.")
         if not 0.05 <= settings.far_target_confidence <= 1.0:
-            raise ValueError("远距增强置信度建议在 0.05 到 1.0 之间。")
+            raise ValueError("Long-range boost threshold should be between 0.05 and 1.0.")
         if settings.trigger_frame_threshold < 1:
-            raise ValueError("连续命中帧数不能小于 1。")
+            raise ValueError("Trigger frames must be at least 1.")
         if settings.camera_index < 0:
-            raise ValueError("摄像头编号不能小于 0。")
+            raise ValueError("Camera index cannot be negative.")
         if not settings.blacklist_apps:
-            raise ValueError("黑名单不能为空，至少保留一个软件名。")
+            raise ValueError("Blacklist cannot be empty. Keep at least one app name.")
         if not settings.start_stop_hotkey:
-            raise ValueError("开启/关闭快捷键不能为空。")
+            raise ValueError("Start/stop hotkey cannot be empty.")
         if not settings.mute_hold_hotkey:
-            raise ValueError("按住静默快捷键不能为空。")
+            raise ValueError("Hold-to-mute hotkey cannot be empty.")
 
         return settings
 
@@ -2154,7 +2154,7 @@ class ChillGuardApp:
         try:
             settings = self.parse_settings()
         except ValueError as exc:
-            messagebox.showerror("参数有误", str(exc))
+            messagebox.showerror("Invalid Settings", str(exc))
             return False
 
         previous_settings = self.runtime.get_settings()
@@ -2167,12 +2167,12 @@ class ChillGuardApp:
         if hotkey_changed:
             self.restart_hotkey_listener()
         self.refresh_form_summaries()
-        self.set_status("设置已应用")
+        self.set_status("Settings applied")
         return True
 
     def start_monitoring(self):
         if self.runtime.running:
-            self.set_status("监测已经在运行")
+            self.set_status("Monitoring is already running")
             return
 
         if not self.apply_settings():
@@ -2187,25 +2187,25 @@ class ChillGuardApp:
             daemon=True,
         )
         self.runtime.thread.start()
-        self.set_status("监测启动中...")
+        self.set_status("Starting monitoring...")
 
     def stop_monitoring(self):
         if not self.runtime.running:
-            self.set_status("监测当前没有运行")
+            self.set_status("Monitoring is not running")
             return
 
         self.runtime.stop_event.set()
         self.runtime.set_live_people_count(None)
-        self.set_status("正在停止监测...")
+        self.set_status("Stopping monitoring...")
 
     def on_preview_toggled(self):
         self.runtime.set_preview_enabled(self.preview_var.get())
         self.refresh_form_summaries()
         if self.preview_var.get():
-            self.set_status("预览已开启")
+            self.set_status("Preview enabled")
         else:
             self.runtime.set_latest_preview(None)
-            self.set_status("预览已关闭")
+            self.set_status("Preview disabled")
 
     def toggle_preview_from_status_menu(self):
         new_state = not self.preview_var.get()
@@ -2217,7 +2217,7 @@ class ChillGuardApp:
             self.runtime.set_latest_preview(None)
         save_settings(settings)
         self.refresh_form_summaries()
-        self.set_status("预览已开启" if new_state else "预览已关闭")
+        self.set_status("Preview enabled" if new_state else "Preview disabled")
 
     def toggle_alert_sound_from_status_menu(self):
         new_state = not self.alert_sound_var.get()
@@ -2227,7 +2227,7 @@ class ChillGuardApp:
         self.runtime.update_settings(settings)
         save_settings(settings)
         self.refresh_form_summaries()
-        self.set_status("风险提示音已开启" if new_state else "风险提示音已关闭")
+        self.set_status("Alert sound enabled" if new_state else "Alert sound disabled")
 
     def normalize_hotkey(self, hotkey_text):
         normalized = hotkey_text.strip().lower().replace(" ", "")
@@ -2374,7 +2374,7 @@ class ChillGuardApp:
         if not self.hotkey_capture_target:
             return
         self.cancel_hotkey_capture()
-        self.set_status("快捷键录制超时，请重新点击“录制”")
+        self.set_status("Hotkey capture timed out. Click “Capture” and try again")
 
     def install_hotkey_capture_monitor(self):
         if self.hotkey_capture_monitor is None:
@@ -2396,7 +2396,7 @@ class ChillGuardApp:
             display_parts.append(self.key_token_for_keycode(keycode))
         display_text = self.format_hotkey_display("+".join(display_parts))
         if display_text:
-            self.set_status(f"正在录制快捷键: {display_text}")
+            self.set_status(f"Capturing hotkey: {display_text}")
 
     def local_hotkey_capture_event(self, event):
         if not self.hotkey_capture_target:
@@ -2419,15 +2419,15 @@ class ChillGuardApp:
     def begin_hotkey_capture(self, target):
         if self.hotkey_capture_target == target:
             self.cancel_hotkey_capture()
-            self.set_status("已取消快捷键录制")
+            self.set_status("Canceled hotkey capture")
             return
         self.cancel_hotkey_capture()
         self.hotkey_capture_target = target
         self.hotkey_capture_modifiers.clear()
         self.hotkey_capture_keycode = None
         self.install_hotkey_capture_monitor()
-        label = "开启/关闭" if target == "start_stop" else "按住静默"
-        self.set_status(f"正在录制 {label} 快捷键，请按下组合键（再次点击“录制”可取消）")
+        label = "Start / Stop" if target == "start_stop" else "Hold to Mute"
+        self.set_status(f"Capturing {label} hotkey. Press the key combination. Click “Capture” again to cancel.")
 
     def finish_hotkey_capture(self, modifiers=None, keycode=None):
         if not self.hotkey_capture_target or keycode is None:
@@ -2439,7 +2439,7 @@ class ChillGuardApp:
         self.set_hotkey_var(target_name, hotkey_value)
         self.apply_settings()
         append_log(f"Hotkey captured: target={target_name} value={hotkey_value}")
-        self.set_status(f"快捷键已更新为 {self.format_hotkey_display(hotkey_value)}")
+        self.set_status(f"Hotkey updated to {self.format_hotkey_display(hotkey_value)}")
 
     def cancel_hotkey_capture(self):
         self.hotkey_capture_target = None
@@ -2616,10 +2616,10 @@ class ChillGuardApp:
             if event_kind == CARBON_HOTKEY_PRESSED and not self.runtime.is_muted_until_release():
                 self.runtime.set_muted_until_release(True)
                 append_log(f"Global mute hotkey triggered (carbon): {settings.mute_hold_hotkey}")
-                self.set_status("全局静默中: 松开快捷键后恢复")
+                self.set_status("Global mute active. Release the hotkey to resume")
             elif event_kind == CARBON_HOTKEY_RELEASED and self.runtime.is_muted_until_release():
                 self.runtime.set_muted_until_release(False)
-                self.set_status("全局静默已解除")
+                self.set_status("Global mute cleared")
 
     def update_hotkey_listener_state(self):
         sources = set()
@@ -2636,15 +2636,15 @@ class ChillGuardApp:
 
     def describe_hotkey_listener_sources(self):
         label_map = {
-            "carbon": "Carbon 全局热键",
-            "appkit-global": "AppKit 全局监听",
-            "appkit-local": "AppKit 前台监听",
+            "carbon": "Carbon global hotkey",
+            "appkit-global": "AppKit global monitor",
+            "appkit-local": "AppKit local monitor",
             "session": "Session tap",
             "annotated": "Annotated tap",
             "hid": "HID tap",
         }
         if not self.hotkey_listener_sources:
-            return "未挂载"
+            return "No listener attached"
         ordered = []
         for source in ("carbon", "appkit-global", "appkit-local", "session", "annotated", "hid"):
             if source in self.hotkey_listener_sources:
@@ -2733,7 +2733,7 @@ class ChillGuardApp:
             if not self.runtime.is_muted_until_release():
                 self.runtime.set_muted_until_release(True)
                 append_log(f"Global mute hotkey triggered: {settings.mute_hold_hotkey}")
-                self.set_status("全局静默中: 松开快捷键后恢复")
+                self.set_status("Global mute active. Release the hotkey to resume")
 
         if not self.carbon_hotkey_registered("start_stop") and self.hotkey_is_active(settings.start_stop_hotkey):
             if not self.suppress_status_reset:
@@ -2749,7 +2749,7 @@ class ChillGuardApp:
             and not self.hotkey_is_active(settings.mute_hold_hotkey)
         ):
             self.runtime.set_muted_until_release(False)
-            self.set_status("全局静默已解除")
+            self.set_status("Global mute cleared")
 
         if (
             not self.carbon_hotkey_registered("start_stop")
@@ -2841,7 +2841,7 @@ class ChillGuardApp:
                     self.hotkey_tap_source_name = None
                     self.update_hotkey_listener_state()
                     if permission_granted:
-                        self.enqueue_ui_task(self.set_status, "全局快捷键挂载失败，请点“重试挂载监听”或重启应用")
+                        self.enqueue_ui_task(self.set_status, "Global hotkey listener attach failed. Click “Retry Listener Attach” or restart the app")
                     return
 
                 run_loop = Quartz.CFRunLoopGetCurrent()
@@ -2867,7 +2867,7 @@ class ChillGuardApp:
             self.hotkey_thread.start()
         except Exception as exc:
             append_log(f"Global hotkey listener failed: {exc}")
-            self.set_status("全局快捷键启动失败，请检查辅助功能权限")
+            self.set_status("Global hotkey startup failed. Check Accessibility permission")
 
     def stop_hotkey_listener(self):
         self.unregister_carbon_hotkeys()
@@ -2922,9 +2922,9 @@ class ChillGuardApp:
         frame = self.runtime.get_latest_preview()
         if frame is None:
             if not self.runtime.running:
-                self.preview_label.configure(image="", text="开启监测后，预览会显示在这里。", style="PreviewPlaceholder.TLabel")
+                self.preview_label.configure(image="", text="Preview will appear here after monitoring starts.", style="PreviewPlaceholder.TLabel")
             elif not self.preview_var.get():
-                self.preview_label.configure(image="", text="预览已关闭，监测仍在继续。", style="PreviewPlaceholder.TLabel")
+                self.preview_label.configure(image="", text="Preview is disabled, but monitoring is still running.", style="PreviewPlaceholder.TLabel")
         else:
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             image = Image.fromarray(rgb_frame)
@@ -2980,7 +2980,7 @@ class ChillGuardApp:
         self.restart_hotkey_listener()
         self.refresh_form_summaries()
         self.render_blacklist_chips()
-        self.set_status("已恢复默认设置")
+        self.set_status("Defaults restored")
 
     def populate_form_from_settings(self, settings):
         values = {
