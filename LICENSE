@@ -1,0 +1,16 @@
+SPDX-License-Identifier: AGPL-3.0-or-later
+
+Copyright (c) 2026 ghostv
+
+This project is licensed under the GNU Affero General Public License,
+version 3 or, at your option, any later version.
+
+Because this repository currently depends on Ultralytics YOLO under its
+AGPL-3.0 licensing path, this repository is published under
+AGPL-3.0-or-later to keep the licensing position explicit and consistent.
+
+Read the full license text before redistributing or modifying this project:
+
+- https://www.gnu.org/licenses/agpl-3.0.txt
+
+No warranty is provided, to the extent permitted by applicable law.

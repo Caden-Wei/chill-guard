@@ -1,0 +1,9 @@
+opencv-python==4.13.0.92
+Pillow==12.1.1
+pyobjc-core==12.1
+pyobjc-framework-ApplicationServices==12.1
+pyobjc-framework-Cocoa==12.1
+pyobjc-framework-Quartz==12.1
+torch==2.11.0
+torchvision==0.26.0
+ultralytics==8.4.26

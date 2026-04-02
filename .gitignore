@@ -1,0 +1,30 @@
+.DS_Store
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build artifacts
+.pyinstaller/
+build/
+dist/
+*.dmg
+
+# Runtime logs
+*.log
+launch.log
+
+# Local dev environment
+.venv/
+.matplotlib/
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
