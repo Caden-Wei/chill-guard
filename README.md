@@ -19,6 +19,8 @@ Current status:
 - Hides configured apps through macOS accessibility automation
 - Supports global start/stop and hold-to-mute hotkeys
 - Supports launch at login
+- An image-led macOS Air workspace with compact rounded controls, real application rows, and separate overview, apps, detection and shortcut pages
+- Switches between Chinese and English immediately, including feedback and the Dock menu
 
 ## What it does not do
 
@@ -30,19 +32,21 @@ Current status:
 
 The app uses a YOLO person-detection model to detect `person` boxes only. Duplicates are removed before choosing the main user. The remaining targets pass the self, buffer, and minimum-area rules. The live count and alert decision use this same set of eligible people, including the visible main user. When the count exceeds `max_allowed_people` for the configured number of consecutive frames, Chill Guard plays an alert and tries to hide the apps in your list.
 
-PyTorch is the default inference backend. An optional Core ML backend runs an exported YOLO11 model locally with CPU and Neural Engine enabled; the system chooses the actual hardware placement. See [Apple inference setup and validation](docs/APPLE_INFERENCE.md).
+Version 1.2 defaults to YOLO26s and Apple Core ML at 1280. The prepared native export runs locally with CPU and Neural Engine enabled; Core ML chooses hardware placement. PyTorch provides a visible compatibility fallback. Existing explicit model choices are preserved when loading settings; the requested local upgrade selects YOLO26s. See [Apple inference setup and validation](docs/APPLE_INFERENCE.md).
 
 ## Repository layout
 
 - `chill_guard_app.py`: main application
 - `person_detector.py`: local Core ML/PyTorch inference and native failure recovery
-- `tools/export_coreml.py`: prepare a fixed-size FP16 YOLO11 Core ML model
+- `chill_guard_ui.py` and `chill_guard_i18n.py`: desktop workspace and bilingual presentation
+- `tools/export_coreml.py`: prepare a fixed-size FP16 YOLO11/YOLO26 Core ML model
 - `tools/benchmark_inference.py`: compare inference on local images without camera access
 - `Chill Guard.spec`: PyInstaller spec for macOS packaging
 - `packaging/build_macos_release.sh`: release build script
 - `docs/INSTALL.md`: end-user macOS install guide
 - `docs/INSTALL.zh-CN.md`: Chinese install guide
-- `yolo11s.pt`: default model file used by the packaged app
+- `yolo26s.pt`: default model file used by the packaged app
+- `yolo11s.pt`: legacy optional model file
 - `yolo11n.pt`: lighter optional model file
 
 ## Requirements
@@ -58,7 +62,8 @@ PyTorch is the default inference backend. An optional Core ML backend runs an ex
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements-dev.txt
+pip install -r requirements-dev.txt -r requirements-coreml.txt
+python tools/export_coreml.py --model yolo26s.pt --imgsz 1280
 python chill_guard_app.py
 ```
 
@@ -109,3 +114,5 @@ python -m unittest discover -s tests -v
 ```
 
 - For user-facing behavior changes, update `docs/INSTALL.md` and `docs/INSTALL.zh-CN.md`
+
+The desktop redesign follows [five generated directions and their evaluation](design/concepts/EVALUATION.md), with direction 01 selected under the user's delegated authority. [Validation](validation/DESKTOP_AIR_2026-10-08.md) separates native inference, settings preservation, visual checks and live-permission limits.

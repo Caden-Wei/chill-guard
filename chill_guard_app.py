@@ -1,6 +1,7 @@
 import ctypes
 from ctypes.util import find_library
 import json
+import math
 import os
 import queue
 import re
@@ -32,6 +33,8 @@ from AppKit import (
 from ApplicationServices import AXIsProcessTrusted, AXIsProcessTrustedWithOptions, kAXTrustedCheckOptionPrompt
 from PIL import Image, ImageOps, ImageTk
 from person_detector import create_detector
+from chill_guard_ui import build_form as build_workspace, setup_theme as setup_workspace_theme
+from chill_guard_i18n import Language
 import objc
 import Quartz
 
@@ -115,8 +118,8 @@ except Exception:
 
 
 DEFAULT_BLACKLIST = ["Safari", "steam_osx", "iPhone Mirroring", "WeChat"]
-APP_VERSION = "1.0.0"
-SETTINGS_SCHEMA_VERSION = 1
+APP_VERSION = "1.2.0"
+SETTINGS_SCHEMA_VERSION = 2
 DEFAULT_START_STOP_HOTKEY = "<cmd>+<ctrl>+<alt>+-"
 DEFAULT_MUTE_HOLD_HOTKEY = "<cmd>+<ctrl>+<alt>+="
 MAC_KEYCODE_MAP = {
@@ -326,6 +329,7 @@ def settings_to_dict(settings):
         "blacklist_apps": sanitize_blacklist_apps(settings.blacklist_apps),
         "model_name": settings.model_name,
         "inference_backend": settings.inference_backend,
+        "language": settings.language,
         "start_stop_hotkey": settings.start_stop_hotkey,
         "mute_hold_hotkey": settings.mute_hold_hotkey,
         "launch_at_login": settings.launch_at_login,
@@ -373,6 +377,8 @@ def load_settings():
                 append_log(f"Invalid setting type for {field_name}; using default")
     if settings.inference_backend not in ("auto", "coreml", "pytorch"):
         settings.inference_backend = defaults.inference_backend
+    if settings.language not in ("zh", "en"):
+        settings.language = defaults.language
     if payload.get("schema_version", 0) == 0:
         settings = migrate_legacy_settings(settings)
     return settings
@@ -400,8 +406,9 @@ class GuardSettings:
     preview_enabled: bool = True
     alert_sound_enabled: bool = True
     blacklist_apps: list[str] = field(default_factory=lambda: DEFAULT_BLACKLIST.copy())
-    model_name: str = "yolo11s.pt"
-    inference_backend: str = "pytorch"
+    model_name: str = "yolo26s.pt"
+    inference_backend: str = "coreml"
+    language: str = "zh"
     start_stop_hotkey: str = DEFAULT_START_STOP_HOTKEY
     mute_hold_hotkey: str = DEFAULT_MUTE_HOLD_HOTKEY
     launch_at_login: bool = False
@@ -428,6 +435,7 @@ class GuardRuntime:
         self.frame_counter = 0
         self.cached_far_detections = []
         self.live_people_count = None
+        self.active_backend = None
         self.alert_worker = threading.Thread(target=self._alert_worker_loop, daemon=True)
         self.alert_worker.start()
 
@@ -456,6 +464,7 @@ class GuardRuntime:
                 blacklist_apps=self.settings.blacklist_apps.copy(),
                 model_name=self.settings.model_name,
                 inference_backend=self.settings.inference_backend,
+                language=self.settings.language,
                 start_stop_hotkey=self.settings.start_stop_hotkey,
                 mute_hold_hotkey=self.settings.mute_hold_hotkey,
                 launch_at_login=self.settings.launch_at_login,
@@ -853,6 +862,7 @@ class StatusBarController(NSObject):
         self.menu = menu
         show_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Show Main Window", "showWindow:", "")
         show_item.setTarget_(self)
+        self.show_item = show_item
         menu.addItem_(show_item)
         self.toggle_monitoring_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Start Monitoring", "toggleMonitoring:", "")
         self.toggle_monitoring_item.setTarget_(self)
@@ -860,6 +870,7 @@ class StatusBarController(NSObject):
         menu.addItem_(NSMenuItem.separatorItem())
         quit_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Quit", "quitApp:", "")
         quit_item.setTarget_(self)
+        self.quit_item = quit_item
         menu.addItem_(quit_item)
 
         self.dock_menu = menu
@@ -884,8 +895,13 @@ class StatusBarController(NSObject):
         return self.dock_menu
 
     def refresh_menu_state(self):
+        language = Language(self.app.runtime.get_settings().language)
+        if getattr(self, "show_item", None) is not None:
+            self.show_item.setTitle_(language.text("Show Main Window"))
+        if getattr(self, "quit_item", None) is not None:
+            self.quit_item.setTitle_(language.text("Quit"))
         if self.toggle_monitoring_item is not None:
-            self.toggle_monitoring_item.setTitle_("Stop Monitoring" if self.app.runtime.running else "Start Monitoring")
+            self.toggle_monitoring_item.setTitle_(language.text("Stop Monitoring" if self.app.runtime.running else "Start Monitoring"))
 
 
 def draw_debug_frame(frame, detections, self_box, self_core_box, self_buffer_box, risk_detections, cooldown_left, people_count=None):
@@ -936,6 +952,7 @@ def monitor_loop(runtime, status_callback):
     runtime.self_box = None
     runtime.self_box_misses = 0
     cap = None
+    failed = False
 
     try:
         status_callback("Loading model...")
@@ -948,7 +965,8 @@ def monitor_loop(runtime, status_callback):
             )
             if detector.notice:
                 append_log(detector.notice)
-            status_callback(f"Monitoring: {detector.description} / camera {current_settings.camera_index}"
+            runtime.active_backend = detector.description
+            status_callback(f"Model ready: {detector.description} / camera {current_settings.camera_index}"
                             + (f". {detector.notice}" if detector.notice else ""))
             return detector
 
@@ -1012,6 +1030,7 @@ def monitor_loop(runtime, status_callback):
             elif not settings.far_target_boost_enabled:
                 runtime.cached_far_detections = []
             if model.description != previous_backend:
+                runtime.active_backend = model.description
                 append_log(model.notice or model.description)
                 status_callback(f"Monitoring: {model.description}. {model.notice or ''}")
             # Remove lower-confidence duplicates before they can win the self
@@ -1108,6 +1127,7 @@ def monitor_loop(runtime, status_callback):
                 runtime.set_latest_preview(None)
 
     except Exception as exc:
+        failed = True
         append_log(f"Monitor loop error: {exc}")
         status_callback(f"Monitoring stopped: {exc}")
     finally:
@@ -1118,9 +1138,14 @@ def monitor_loop(runtime, status_callback):
         runtime.cached_far_detections = []
         if cap is not None:
             cap.release()
+        if not failed:
+            status_callback("Monitoring stopped")
 
 
 class ChillGuardApp:
+    persist_settings = staticmethod(save_settings)
+    serialized_settings = staticmethod(settings_to_dict)
+
     def __init__(self, root):
         self.root = root
         self.root.title("Chill Guard Console")
@@ -1213,297 +1238,7 @@ class ChillGuardApp:
         self.root.bind("<Destroy>", self.on_window_destroyed, add="+")
 
     def build_form(self):
-        container = ttk.Frame(self.root, padding=6, style="Window.TFrame")
-        container.pack(fill="both", expand=True)
-        container.columnconfigure(0, weight=11, minsize=320)
-        container.columnconfigure(1, weight=8, minsize=280)
-        container.rowconfigure(1, weight=1)
-
-        header = ttk.Frame(container, padding=(8, 4), style="TopBar.TFrame")
-        header.grid(row=0, column=0, columnspan=2, sticky="ew")
-        header.columnconfigure(0, weight=1)
-        ttk.Label(header, text="Chill Guard", style="HeroTitle.TLabel").grid(row=0, column=0, sticky="w")
-        ttk.Label(header, text=f"v{APP_VERSION}", style="HeroVersion.TLabel", padding=(10, 6)).grid(row=0, column=1, sticky="e")
-
-        left_panel = ttk.Frame(container, style="Window.TFrame")
-        left_panel.grid(row=1, column=0, sticky="nsew", padx=(0, 10))
-        left_panel.columnconfigure(0, weight=1)
-        left_panel.rowconfigure(1, weight=1)
-
-        right_panel = ttk.Frame(container, style="Window.TFrame")
-        right_panel.grid(row=1, column=1, sticky="nsew")
-        right_panel.columnconfigure(0, weight=1)
-        right_panel.rowconfigure(0, weight=1)
-
-        ops_card = ttk.Frame(left_panel, style="SurfaceCard.TFrame", padding=10)
-        ops_card.grid(row=0, column=0, sticky="ew")
-        status_inner = ttk.Frame(ops_card, style="StatusCard.TFrame", padding=(12, 8))
-        status_inner.pack(fill="x")
-        status_inner.columnconfigure(1, weight=1)
-        status_inner.columnconfigure(2, weight=0)
-        self.status_dot = tk.Canvas(status_inner, width=16, height=16, highlightthickness=0, bg="#e8f3ff", borderwidth=0)
-        self.status_dot.grid(row=0, column=0, sticky="w", padx=(0, 8), pady=(0, 0))
-        self.status_dot.create_oval(2, 2, 14, 14, fill="#22c55e", outline="")
-        self.status_caption_label = ttk.Label(
-            status_inner,
-            textvariable=self.status_caption_var,
-            style="StatusTitle.TLabel",
-            justify="left",
-            anchor="w",
-            wraplength=420,
-        )
-        self.status_caption_label.grid(row=0, column=1, sticky="ew")
-        self.status_detail_label = None
-        self.status_pill_label = ttk.Label(
-            status_inner,
-            textvariable=self.status_pill_var,
-            style="StatusPill.TLabel",
-            padding=(12, 6),
-        )
-        self.status_pill_label.grid(row=0, column=2, sticky="e", padx=(12, 0))
-        status_inner.bind("<Configure>", self.update_status_layout, add="+")
-
-        quick_actions = ttk.Frame(ops_card, style="SurfaceCard.TFrame")
-        quick_actions.pack(fill="x", pady=(8, 0))
-        primary_actions = ttk.Frame(quick_actions, style="SurfaceCard.TFrame")
-        primary_actions.pack(fill="x")
-        primary_actions.columnconfigure(0, weight=1)
-        primary_actions.columnconfigure(1, weight=1)
-        ttk.Button(primary_actions, text="Start Monitoring", command=self.start_monitoring, style="PrimaryAction.TButton").grid(
-            row=0, column=0, sticky="ew", padx=(0, 6)
-        )
-        ttk.Button(primary_actions, text="Stop Monitoring", command=self.stop_monitoring, style="DangerAction.TButton").grid(
-            row=0, column=1, sticky="ew", padx=(6, 0)
-        )
-        secondary_actions = ttk.Frame(quick_actions, style="SurfaceCard.TFrame")
-        secondary_actions.pack(fill="x", pady=(6, 0))
-        secondary_actions.columnconfigure(0, weight=1)
-        secondary_actions.columnconfigure(1, weight=1)
-        ttk.Button(secondary_actions, text="Apply Settings", command=self.apply_settings, style="Utility.TButton").grid(
-            row=0, column=0, sticky="ew", padx=(0, 6)
-        )
-        ttk.Button(secondary_actions, text="Reset Defaults", command=self.reset_defaults, style="Utility.TButton").grid(
-            row=0, column=1, sticky="ew", padx=(6, 0)
-        )
-
-        settings_card = ttk.Frame(right_panel, style="SurfaceCard.TFrame", padding=8)
-        settings_card.grid(row=0, column=0, sticky="nsew")
-        settings_card.columnconfigure(0, weight=1)
-        settings_card.rowconfigure(1, weight=1)
-
-        mode_tabs = ttk.Frame(settings_card, style="SurfaceCard.TFrame")
-        mode_tabs.grid(row=0, column=0, sticky="ew")
-        segment_rail = ttk.Frame(mode_tabs, style="SegmentRail.TFrame", padding=2)
-        segment_rail.pack(fill="x")
-        segment_rail.columnconfigure(0, weight=1)
-        segment_rail.columnconfigure(1, weight=1)
-        segment_rail.columnconfigure(2, weight=1)
-        self.panel_buttons = {}
-        for index, (name, label) in enumerate((("parameters", "Detection"), ("hotkeys", "Hotkeys"), ("startup", "Startup & Hiding"))):
-            button = ttk.Button(
-                segment_rail,
-                text=label,
-                command=lambda key=name: self.switch_settings_panel(key),
-                style="Segment.TButton",
-            )
-            button.grid(row=0, column=index, sticky="ew", padx=2)
-            self.panel_buttons[name] = button
-
-        switcher_card = ttk.Frame(settings_card, style="InsetPanel.TFrame", padding=8)
-        switcher_card.grid(row=1, column=0, sticky="nsew", pady=(6, 0))
-        switcher_card.columnconfigure(0, weight=1)
-        switcher_card.rowconfigure(0, weight=1)
-
-        switcher_body = ttk.Frame(switcher_card, style="InsetPanel.TFrame")
-        switcher_body.grid(row=0, column=0, sticky="nsew")
-        switcher_body.columnconfigure(0, weight=1)
-        switcher_body.rowconfigure(0, weight=1)
-        self.panel_frames = {}
-
-        def add_field_grid(form, fields):
-            for index, (label_text, key, default_value) in enumerate(fields):
-                row = index // 2
-                column_offset = (index % 2) * 2
-                ttk.Label(form, text=label_text, style="FieldLabel.TLabel").grid(row=row, column=column_offset, sticky="w", pady=7, padx=(0, 10))
-                entry = ttk.Entry(form, width=14)
-                entry.insert(0, default_value)
-                entry.grid(row=row, column=column_offset + 1, sticky="ew", pady=7, padx=(0, 20))
-                self.entries[key] = entry
-            form.columnconfigure(1, weight=1)
-            form.columnconfigure(3, weight=1)
-
-        parameters_body = ttk.Frame(switcher_body, style="InsetPanel.TFrame")
-        parameters_body.grid(row=0, column=0, sticky="nsew")
-        parameters_body.columnconfigure(0, weight=1)
-        parameters_body.rowconfigure(0, weight=1)
-        self.panel_frames["parameters"] = parameters_body
-        self.entries = {}
-
-        monitor_stack = ttk.Frame(parameters_body, style="InsetPanel.TFrame")
-        monitor_stack.grid(row=0, column=0, sticky="nsew")
-        monitor_stack.columnconfigure(0, weight=1)
-        monitor_stack.rowconfigure(0, weight=1)
-
-        self.monitor_basic_frame = ttk.Frame(monitor_stack, style="InsetPanel.TFrame")
-        self.monitor_basic_frame.grid(row=0, column=0, sticky="nsew")
-
-        basic_toggles_row = ttk.Frame(self.monitor_basic_frame, style="InsetPanel.TFrame")
-        basic_toggles_row.pack(fill="x")
-        self.preview_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(
-            basic_toggles_row,
-            text="Enable Preview",
-            variable=self.preview_var,
-            command=self.on_preview_toggled,
-            style="Toggle.TCheckbutton",
-        ).pack(side="left")
-        self.alert_sound_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(
-            basic_toggles_row,
-            text="Alert Sound",
-            variable=self.alert_sound_var,
-            command=self.apply_settings,
-            style="Toggle.TCheckbutton",
-        ).pack(side="left", padx=(14, 0))
-        self.parameters_toggle_button = ttk.Button(
-            basic_toggles_row,
-            text="Advanced",
-            command=self.show_monitor_advanced_view,
-            style="PillSecondary.TButton",
-        )
-        self.parameters_toggle_button.pack(side="right")
-
-        model_row = ttk.Frame(self.monitor_basic_frame, style="InsetPanel.TFrame")
-        model_row.pack(fill="x", pady=(12, 0))
-        ttk.Label(model_row, text="Model File", style="FieldHeader.TLabel").pack(side="left")
-        self.model_var = tk.StringVar(value="yolo11n.pt")
-        ttk.Entry(model_row, textvariable=self.model_var, width=22).pack(side="left", padx=(10, 0))
-        backend_row = ttk.Frame(self.monitor_basic_frame, style="InsetPanel.TFrame")
-        backend_row.pack(fill="x", pady=(8, 0))
-        ttk.Label(backend_row, text="Inference", style="FieldHeader.TLabel").pack(side="left")
-        self.backend_var = tk.StringVar(value=self.default_settings.inference_backend)
-        ttk.Combobox(backend_row, textvariable=self.backend_var, values=("auto", "coreml", "pytorch"),
-                     state="readonly", width=12).pack(side="left", padx=(10, 0))
-
-        basic_form_wrap = ttk.Frame(self.monitor_basic_frame, style="FormBlock.TFrame", padding=14)
-        basic_form_wrap.pack(fill="x", pady=(10, 0))
-        basic_form = ttk.Frame(basic_form_wrap, style="FormBlock.TFrame")
-        basic_form.pack(fill="x")
-        add_field_grid(
-            basic_form,
-            [
-                ("Allowed People", "max_allowed_people", "1"),
-                ("Camera Index", "camera_index", "0"),
-                ("Frame Scale", "frame_scale", "1.0"),
-                ("Detect Size", "detect_imgsz", "1280"),
-                ("Confidence Threshold", "confidence_threshold", "0.30"),
-                ("Trigger Frames", "trigger_frame_threshold", "1"),
-                ("Minimum Target Area", "min_risk_box_area_ratio", "0.002"),
-                ("Cooldown (s)", "cooldown_seconds", "2"),
-            ],
-        )
-
-        self.monitor_advanced_frame = ttk.Frame(monitor_stack, style="InsetPanel.TFrame")
-        self.monitor_advanced_frame.grid(row=0, column=0, sticky="nsew")
-
-        advanced_toggles = ttk.Frame(self.monitor_advanced_frame, style="InsetPanel.TFrame")
-        advanced_toggles.pack(fill="x")
-        self.far_target_boost_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(
-            advanced_toggles,
-            text="Enable Long-Range Boost",
-            variable=self.far_target_boost_var,
-            command=self.apply_settings,
-            style="Toggle.TCheckbutton",
-        ).pack(side="left")
-        ttk.Button(
-            advanced_toggles,
-            text="Back to Basics",
-            command=self.show_monitor_basic_view,
-            style="PillSecondary.TButton",
-        ).pack(side="right")
-
-        self.parameters_frame = ttk.Frame(self.monitor_advanced_frame, style="FormBlock.TFrame", padding=14)
-        self.parameters_frame.pack(fill="x", pady=(10, 0))
-        advanced_form = ttk.Frame(self.parameters_frame, style="FormBlock.TFrame")
-        advanced_form.pack(fill="x")
-        add_field_grid(
-            advanced_form,
-            [
-                ("Self Expand Left/Right", "self_box_expand_x", "0.28"),
-                ("Self Expand Top", "self_box_expand_y_top", "0.18"),
-                ("Self Expand Bottom", "self_box_expand_y_bottom", "0.10"),
-                ("Self Lock Min Confidence", "self_track_min_confidence", "0.35"),
-                ("Self Tracking Miss Tolerance", "self_track_max_misses", "18"),
-                ("Long-Range Boost Threshold", "far_target_confidence", "0.18"),
-            ],
-        )
-
-        hotkey_body = ttk.Frame(switcher_body, style="InsetPanel.TFrame")
-        hotkey_body.grid(row=0, column=0, sticky="nsew")
-        self.panel_frames["hotkeys"] = hotkey_body
-        hotkey_body.columnconfigure(1, weight=1)
-        ttk.Label(hotkey_body, textvariable=self.hotkey_compact_var, style="CardBodyMuted.TLabel").grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 10))
-        ttk.Label(hotkey_body, text="Start / Stop", style="FieldHeader.TLabel").grid(row=1, column=0, sticky="w", pady=(0, 8))
-        self.start_stop_hotkey_var = tk.StringVar(value=self.default_settings.start_stop_hotkey)
-        self.start_stop_hotkey_entry = ttk.Entry(hotkey_body, textvariable=self.start_stop_hotkey_var, state="readonly")
-        self.start_stop_hotkey_entry.grid(row=1, column=1, sticky="ew", padx=(0, 8), pady=(0, 8))
-        ttk.Button(hotkey_body, text="Capture", command=lambda: self.begin_hotkey_capture("start_stop"), style="PillSecondary.TButton").grid(row=1, column=2, pady=(0, 8))
-        ttk.Label(hotkey_body, text="Hold to Mute", style="FieldHeader.TLabel").grid(row=2, column=0, sticky="w")
-        self.mute_hold_hotkey_var = tk.StringVar(value=self.default_settings.mute_hold_hotkey)
-        self.mute_hold_hotkey_entry = ttk.Entry(hotkey_body, textvariable=self.mute_hold_hotkey_var, state="readonly")
-        self.mute_hold_hotkey_entry.grid(row=2, column=1, sticky="ew", padx=(0, 8))
-        ttk.Button(hotkey_body, text="Capture", command=lambda: self.begin_hotkey_capture("mute_hold"), style="PillSecondary.TButton").grid(row=2, column=2)
-        ttk.Label(hotkey_body, textvariable=self.hotkey_hint_var, style="Muted.TLabel", wraplength=320).grid(row=3, column=0, columnspan=3, sticky="w", pady=(12, 6))
-        ttk.Button(hotkey_body, text="Retry Listener Attach", command=self.retry_hotkey_listener, style="PillSecondary.TButton").grid(row=4, column=1, sticky="e", padx=(0, 8))
-        ttk.Button(hotkey_body, text="Open Accessibility Settings", command=self.open_accessibility_settings, style="PillSecondary.TButton").grid(row=4, column=2, sticky="e")
-
-        startup_body = ttk.Frame(switcher_body, style="InsetPanel.TFrame")
-        startup_body.grid(row=0, column=0, sticky="nsew")
-        self.panel_frames["startup"] = startup_body
-        ttk.Label(startup_body, textvariable=self.startup_summary_var, style="CardBodyMuted.TLabel").pack(anchor="w", pady=(0, 10))
-        ttk.Checkbutton(
-            startup_body,
-            text="Launch Chill Guard at Login",
-            variable=self.launch_at_login_var,
-            command=self.on_launch_at_login_toggled,
-            style="Toggle.TCheckbutton",
-        ).pack(anchor="w")
-        ttk.Label(startup_body, text="Apps to Hide", style="FieldHeader.TLabel").pack(anchor="w", pady=(10, 0))
-        ttk.Label(startup_body, textvariable=self.blacklist_helper_var, style="Muted.TLabel").pack(anchor="w", pady=(0, 6))
-        self.blacklist_text = scrolledtext.ScrolledText(startup_body, height=4, relief="flat", borderwidth=0)
-        self.blacklist_text.pack(fill="both", expand=True)
-        self.blacklist_text.insert("1.0", "\n".join(DEFAULT_BLACKLIST))
-        self.blacklist_text.bind("<<Modified>>", self.on_blacklist_text_modified)
-
-        preview_frame = ttk.Frame(left_panel, style="SurfaceCard.TFrame", padding=8)
-        preview_frame.grid(row=1, column=0, sticky="nsew", pady=(10, 0))
-        preview_frame.columnconfigure(0, weight=1)
-        preview_frame.rowconfigure(1, weight=1)
-        preview_frame.grid_propagate(False)
-        preview_top = ttk.Frame(preview_frame, style="SurfaceCard.TFrame")
-        preview_top.grid(row=0, column=0, sticky="ew")
-        preview_top.columnconfigure(0, weight=1)
-        preview_left = ttk.Frame(preview_top, style="SurfaceCard.TFrame")
-        preview_left.grid(row=0, column=0, sticky="w")
-        ttk.Label(preview_left, text="Live Preview", style="CardTitle.TLabel").pack(side="left")
-        preview_chips = ttk.Frame(preview_top, style="SurfaceCard.TFrame")
-        preview_chips.grid(row=0, column=1, sticky="e")
-        ttk.Label(preview_chips, textvariable=self.preview_chip_people_var, style="InfoChipNeutral.TLabel", padding=(10, 5)).pack(side="left")
-        ttk.Label(preview_chips, textvariable=self.preview_chip_limit_var, style="InfoChipNeutral.TLabel", padding=(10, 5)).pack(side="left", padx=(8, 0))
-        ttk.Label(preview_chips, textvariable=self.preview_chip_state_var, style="InfoChipOk.TLabel", padding=(10, 5)).pack(side="left", padx=(8, 0))
-        self.preview_label = ttk.Label(
-            preview_frame,
-            text="Preview will appear here after monitoring starts.",
-            anchor="center",
-            justify="center",
-            style="PreviewPlaceholder.TLabel",
-        )
-        self.preview_label.grid(row=1, column=0, sticky="nsew")
-
-        self.switch_settings_panel("parameters")
-        self.refresh_form_summaries()
-        self.render_blacklist_chips()
+        build_workspace(self, APP_VERSION)
 
     def set_status(self, message):
         append_log(f"STATUS: {message}")
@@ -1516,18 +1251,8 @@ class ChillGuardApp:
         self.update_status_bar_controls()
 
     def update_status_layout(self, _event=None):
-        if self.status_caption_label is None:
-            return
-        card_width = 0
-        if _event is not None and hasattr(_event, "width"):
-            card_width = int(_event.width)
-        if card_width <= 0:
-            card_width = self.status_caption_label.master.winfo_width()
-        pill_width = self.status_pill_label.winfo_reqwidth() if self.status_pill_label is not None else 88
-        available_width = max(260, card_width - pill_width - 72)
-        self.status_caption_label.configure(wraplength=available_width)
-        if self.status_detail_label is not None:
-            self.status_detail_label.configure(wraplength=available_width)
+        # The workspace owns wrapping and responsive card sizes.
+        return
 
     def status_detail_for_message(self, message):
         if "Monitoring:" in message or "Starting monitoring" in message:
@@ -1582,204 +1307,7 @@ class ChillGuardApp:
         self.enqueue_ui_task(self.set_status, message)
 
     def setup_theme(self):
-        self.root.configure(bg="#edf2f7")
-        style = ttk.Style(self.root)
-        if "clam" in style.theme_names():
-            style.theme_use("clam")
-
-        base_bg = "#edf2f7"
-        top_bar_bg = "#e9eff6"
-        card_bg = "#f9fbfe"
-        inset_bg = "#f2f6fb"
-        form_bg = "#edf3f9"
-        text_primary = "#132033"
-        text_secondary = "#5f6f82"
-        text_muted = "#738499"
-
-        style.configure(".", background=base_bg, foreground=text_primary, font=("SF Pro Text", 11))
-        style.configure("TLabel", background=base_bg, foreground=text_primary)
-        style.configure("Window.TFrame", background=base_bg)
-        style.configure("App.TFrame", background=base_bg)
-        style.configure("TopBar.TFrame", background=top_bar_bg)
-        style.configure("Hero.TFrame", background=top_bar_bg)
-        style.configure("SurfaceCard.TFrame", background=card_bg, borderwidth=0, relief="flat")
-        style.configure("Card.TFrame", background=card_bg)
-        style.configure("InsetPanel.TFrame", background=inset_bg, borderwidth=0, relief="flat")
-        style.configure("FormBlock.TFrame", background=form_bg, borderwidth=0, relief="flat")
-        style.configure("Soft.TFrame", background=form_bg)
-        style.configure("Panel.TFrame", background=inset_bg)
-        style.configure(
-            "Card.TLabelframe",
-            background=card_bg,
-            borderwidth=1,
-            relief="solid",
-        )
-        style.configure(
-            "Panel.TLabelframe",
-            background=card_bg,
-            borderwidth=1,
-            relief="solid",
-        )
-        style.configure(
-            "Card.TLabelframe.Label",
-            background=card_bg,
-            foreground="#1f2c3f",
-            font=("SF Pro Display", 12, "bold"),
-        )
-        style.configure(
-            "Panel.TLabelframe.Label",
-            background=card_bg,
-            foreground="#1f2c3f",
-            font=("SF Pro Display", 12, "bold"),
-        )
-        style.configure("HeroTitle.TLabel", background=top_bar_bg, foreground=text_primary, font=("SF Pro Display", 16, "bold"))
-        style.configure("HeroBody.TLabel", background=top_bar_bg, foreground=text_secondary, font=("SF Pro Text", 9))
-        style.configure("HeroVersion.TLabel", background="#dde7f2", foreground="#33465d", font=("SF Pro Text", 9, "bold"))
-        style.configure("CardTitle.TLabel", background=card_bg, foreground=text_primary, font=("SF Pro Display", 12, "bold"))
-        style.configure("CardBody.TLabel", background=card_bg, foreground=text_secondary, font=("SF Pro Text", 9))
-        style.configure("CardBodyMuted.TLabel", background=inset_bg, foreground=text_muted, font=("SF Pro Text", 9))
-        style.configure("SectionTitle.TLabel", background=card_bg, foreground=text_primary, font=("SF Pro Display", 14, "bold"))
-        style.configure("SectionMini.TLabel", background=inset_bg, foreground="#2f4158", font=("SF Pro Text", 9, "bold"))
-        style.configure("FieldHeader.TLabel", background=inset_bg, foreground="#26384f", font=("SF Pro Text", 9, "bold"))
-        style.configure("FieldLabel.TLabel", background=form_bg, foreground="#2f4158", font=("SF Pro Text", 9, "bold"))
-        style.configure("Muted.TLabel", background=inset_bg, foreground=text_muted, font=("SF Pro Text", 9))
-        style.configure("Chip.TLabel", background="#eaf0f8", foreground="#34475e", font=("SF Pro Text", 9, "bold"))
-        style.configure("SummaryChip.TLabel", background="#edf3fb", foreground="#39516a", font=("SF Pro Text", 9, "bold"))
-        style.configure("Guide.TLabel", background=inset_bg, foreground="#34475e", font=("SF Pro Text", 11))
-        style.configure("PreviewPlaceholder.TLabel", background="#d9e6f4", foreground="#4e647d", font=("SF Pro Text", 12, "bold"), padding=8)
-        style.configure("PreviewImage.TLabel", background="#d9e6f4", padding=0)
-        style.configure("StatusCard.TFrame", background="#eef4fb")
-        style.configure("StatusTitle.TLabel", background="#eef4fb", foreground=text_primary, font=("SF Pro Text", 10, "bold"))
-        style.configure("StatusBody.TLabel", background="#eef4fb", foreground=text_secondary, font=("SF Pro Text", 9))
-        style.configure("StatusPill.TLabel", background="#e0ebf7", foreground="#234061", font=("SF Pro Text", 9, "bold"))
-        style.configure("InfoChipNeutral.TLabel", background="#eef3fa", foreground="#3b4f67", font=("SF Pro Text", 9, "bold"))
-        style.configure("InfoChipOk.TLabel", background="#e8f4ec", foreground="#2f6f46", font=("SF Pro Text", 9, "bold"))
-        style.configure("NoticeTitle.TLabel", background="#fff3d6", foreground="#9a6700", font=("SF Pro Text", 10, "bold"))
-        style.configure("NoticeBody.TLabel", background="#fff3d6", foreground="#8a5a00", font=("SF Pro Text", 10))
-        style.configure("NoticeHint.TLabel", background="#fff3d6", foreground="#8b7355", font=("SF Pro Text", 9))
-        style.configure("Warning.TFrame", background="#fff3d6")
-        style.configure("ChipList.TFrame", background=inset_bg)
-        style.configure("Tag.TLabel", background="#dfeaf7", foreground="#2a4560", font=("SF Pro Text", 9, "bold"))
-        style.configure("TEntry", fieldbackground="#ffffff", foreground=text_primary, borderwidth=1, padding=(8, 5))
-        style.map(
-            "TEntry",
-            bordercolor=[("focus", "#7ea8e8"), ("!focus", "#d4dde9")],
-            lightcolor=[("focus", "#7ea8e8"), ("!focus", "#d4dde9")],
-            darkcolor=[("focus", "#7ea8e8"), ("!focus", "#d4dde9")],
-            fieldbackground=[("disabled", "#f2f5f9")],
-        )
-        style.configure("TCheckbutton", background=inset_bg, foreground=text_primary)
-        style.configure("Toggle.TCheckbutton", background=inset_bg, foreground=text_primary, font=("SF Pro Text", 9))
-        style.configure(
-            "PrimaryAction.TButton",
-            background="#3b82f6",
-            foreground="#ffffff",
-            borderwidth=0,
-            focusthickness=0,
-            padding=(10, 5),
-            font=("SF Pro Text", 10, "bold"),
-        )
-        style.map("PrimaryAction.TButton", background=[("active", "#2d74e3"), ("pressed", "#245fc2")])
-        style.configure(
-            "DangerAction.TButton",
-            background="#ef7d73",
-            foreground="#ffffff",
-            borderwidth=0,
-            focusthickness=0,
-            padding=(10, 5),
-            font=("SF Pro Text", 10, "bold"),
-        )
-        style.map("DangerAction.TButton", background=[("active", "#e56f64"), ("pressed", "#d15f54")])
-        style.configure(
-            "Utility.TButton",
-            background="#e9eef6",
-            foreground="#21354c",
-            borderwidth=1,
-            focusthickness=0,
-            padding=(9, 4),
-            font=("SF Pro Text", 9, "bold"),
-        )
-        style.map(
-            "Utility.TButton",
-            background=[("active", "#dde6f2"), ("pressed", "#d2deec")],
-            bordercolor=[("!focus", "#d3dce8"), ("focus", "#aac3e6")],
-        )
-        style.configure(
-            "Ghost.TButton",
-            background="#edf2f8",
-            foreground="#324961",
-            borderwidth=1,
-            focusthickness=0,
-            padding=(8, 3),
-            font=("SF Pro Text", 9, "bold"),
-        )
-        style.map("Ghost.TButton", background=[("active", "#e3ebf5"), ("pressed", "#d8e3f0")], bordercolor=[("!focus", "#d3dce8"), ("focus", "#aac3e6")])
-        style.configure(
-            "Accent.TButton",
-            background="#3b82f6",
-            foreground="#ffffff",
-            borderwidth=0,
-            focusthickness=0,
-            padding=(12, 7),
-            font=("SF Pro Text", 10, "bold"),
-        )
-        style.map("Accent.TButton", background=[("active", "#2d74e3"), ("pressed", "#245fc2")])
-        style.configure(
-            "Secondary.TButton",
-            background="#e9eef6",
-            foreground="#21354c",
-            borderwidth=1,
-            focusthickness=0,
-            padding=(11, 6),
-            font=("SF Pro Text", 10, "bold"),
-        )
-        style.map("Secondary.TButton", background=[("active", "#dde6f2"), ("pressed", "#d2deec")], bordercolor=[("!focus", "#d3dce8"), ("focus", "#aac3e6")])
-        style.configure(
-            "PillSecondary.TButton",
-            background="#e9eef6",
-            foreground="#21354c",
-            borderwidth=1,
-            focusthickness=0,
-            padding=(7, 2),
-            font=("SF Pro Text", 9, "bold"),
-        )
-        style.map("PillSecondary.TButton", background=[("active", "#dde6f2"), ("pressed", "#d2deec")], bordercolor=[("!focus", "#d3dce8"), ("focus", "#aac3e6")])
-        style.configure(
-            "Danger.TButton",
-            background="#ef7d73",
-            foreground="#ffffff",
-            borderwidth=0,
-            focusthickness=0,
-            padding=(12, 7),
-            font=("SF Pro Text", 10, "bold"),
-        )
-        style.map("Danger.TButton", background=[("active", "#e56f64"), ("pressed", "#d15f54")])
-        style.configure(
-            "SegmentRail.TFrame",
-            background="#e7edf5",
-            borderwidth=0,
-            relief="flat",
-        )
-        style.configure(
-            "Segment.TButton",
-            background="#e7edf5",
-            foreground="#69809a",
-            borderwidth=0,
-            focusthickness=0,
-            padding=(8, 3),
-            font=("SF Pro Text", 9, "bold"),
-        )
-        style.map("Segment.TButton", background=[("active", "#dfe7f1"), ("pressed", "#d7e1ee")])
-        style.configure(
-            "SegmentActive.TButton",
-            background="#ffffff",
-            foreground="#1f344d",
-            borderwidth=1,
-            focusthickness=0,
-            padding=(8, 3),
-            font=("SF Pro Text", 9, "bold"),
-        )
-        style.map("SegmentActive.TButton", background=[("active", "#fdfefe"), ("pressed", "#f4f8fc")], bordercolor=[("!focus", "#ccd8e7"), ("focus", "#9ebae2")])
+        setup_workspace_theme(self)
 
     def setup_status_bar(self):
         try:
@@ -1806,7 +1334,8 @@ class ChillGuardApp:
 
     def show_monitor_basic_view(self):
         if self.monitor_basic_frame is not None:
-            self.monitor_basic_frame.tkraise()
+            self.monitor_advanced_frame.grid_remove()
+            self.monitor_basic_frame.grid()
         if self.parameters_toggle_button is not None:
             self.parameters_toggle_button.configure(text="Advanced", command=self.show_monitor_advanced_view)
         self.monitor_mode_var.set("basic")
@@ -1815,7 +1344,8 @@ class ChillGuardApp:
 
     def show_monitor_advanced_view(self):
         if self.monitor_advanced_frame is not None:
-            self.monitor_advanced_frame.tkraise()
+            self.monitor_basic_frame.grid_remove()
+            self.monitor_advanced_frame.grid()
         if self.parameters_toggle_button is not None:
             self.parameters_toggle_button.configure(text="Back to Basics", command=self.show_monitor_basic_view)
         self.monitor_mode_var.set("advanced")
@@ -1823,20 +1353,19 @@ class ChillGuardApp:
         self.refresh_form_summaries()
 
     def switch_settings_panel(self, name):
-        if not hasattr(self, "panel_frames"):
+        if not hasattr(self, "panel_frames") or name not in self.panel_frames:
             return
         for key, frame in self.panel_frames.items():
-            if key == name:
-                frame.tkraise()
-            button = self.panel_buttons.get(key)
-            if button is not None:
-                button.configure(style="SegmentActive.TButton" if key == name else "Segment.TButton")
+            frame.grid() if key == name else frame.grid_remove()
         self.active_settings_panel = name
         if name == "parameters":
             if self.monitor_mode_var.get() == "advanced":
                 self.show_monitor_advanced_view()
             else:
                 self.show_monitor_basic_view()
+        if getattr(self, "ui", None) is not None:
+            self.ui.select_page(name)
+            self.ui.refresh()
 
     def toggle_section(self, name):
         section = self.collapsible_sections.get(name)
@@ -1864,21 +1393,9 @@ class ChillGuardApp:
             self.update_section_visibility(name)
 
     def refresh_form_summaries(self):
-        max_people = self.entries.get("max_allowed_people").get().strip() if self.entries else "1"
-        model_name = self.model_var.get().strip() if hasattr(self, "model_var") else "yolo11s.pt"
-        preview_state = "Preview on" if hasattr(self, "preview_var") and self.preview_var.get() else "Preview off"
-        mode_text = "Advanced" if self.monitor_mode_var.get() == "advanced" else "Basic"
-        self.settings_summary_var.set(f"{mode_text} · {model_name} · Allowed {max_people} · {preview_state}")
-
-        if has_accessibility_permission():
-            self.hotkey_compact_var.set("Authorized. You can capture or replace hotkeys now.")
-        else:
-            self.hotkey_compact_var.set("Not authorized. Global hotkeys will not work yet.")
-
-        blacklist_count = len(self.get_blacklist_items()) if self.blacklist_text is not None else 0
-        launch_text = "Launch at login on" if self.launch_at_login_var.get() else "Launch at login off"
-        self.startup_summary_var.set(f"{launch_text} · Hide {blacklist_count} apps")
         self.update_runtime_chips()
+        if getattr(self, "ui", None) is not None:
+            self.ui.refresh()
 
     def update_runtime_chips(self, message=None):
         text = message if message is not None else self.status_var.get()
@@ -1913,6 +1430,9 @@ class ChillGuardApp:
         elif text.startswith(("Alert triggered", "Alert already in progress")):
             self.preview_chip_state_var.set("Alerting")
             self.status_pill_var.set("Alert")
+        elif self.runtime.running and text.startswith(("Starting monitoring", "Loading model", "Model ready:")):
+            self.preview_chip_state_var.set("Starting")
+            self.status_pill_var.set("Starting")
         elif self.runtime.running:
             self.preview_chip_state_var.set("Monitoring")
             self.status_pill_var.set("Running")
@@ -1920,6 +1440,8 @@ class ChillGuardApp:
             self.preview_chip_state_var.set("Standby")
             self.status_pill_var.set("Standby")
         self.update_status_layout()
+        if getattr(self, "ui", None) is not None:
+            self.ui.refresh()
 
     def get_blacklist_items(self):
         return [
@@ -1929,23 +1451,8 @@ class ChillGuardApp:
         ]
 
     def render_blacklist_chips(self):
-        items = self.get_blacklist_items() if self.blacklist_text is not None else []
-        self.blacklist_helper_var.set(
-            "One app name per line. Chill Guard will try to hide these apps when risk is detected."
-            if items
-            else "Keep at least one app name."
-        )
-        if self.blacklist_chip_container is None:
-            return
-        for child in self.blacklist_chip_container.winfo_children():
-            child.destroy()
-        for index, item in enumerate(items):
-            ttk.Label(
-                self.blacklist_chip_container,
-                text=f"{item}  x",
-                style="Tag.TLabel",
-                padding=(10, 5),
-            ).grid(row=0, column=index, padx=(0, 8), pady=2, sticky="w")
+        if getattr(self, "ui", None) is not None:
+            self.ui.refresh()
 
     def on_blacklist_text_modified(self, _event=None):
         self.blacklist_text.edit_modified(False)
@@ -2045,7 +1552,7 @@ class ChillGuardApp:
             self.set_status("Launch-at-login setting updated")
         except RuntimeError as exc:
             self.launch_at_login_var.set(not self.launch_at_login_var.get())
-            messagebox.showerror("Launch-at-login update failed", str(exc))
+            messagebox.showerror(self.ui.t("Launch-at-login update failed"), self.ui.language.system(str(exc)), parent=self.root)
 
     def test_alert_sound(self):
         play_alert_sound()
@@ -2069,6 +1576,13 @@ class ChillGuardApp:
             self.set_status(f"Test app hide failed: {error_message or 'Check Automation permission'}")
 
     def parse_settings(self):
+        previous = self.runtime.get_settings()
+        def saved_hotkey(variable, name):
+            display, original = variable.get().strip(), getattr(previous, name)
+            pending = getattr(self, "pending_hotkeys", {}).get(name)
+            if pending is not None:
+                return pending
+            return original if display == self.format_hotkey_display(original) else self.normalize_hotkey(display)
         try:
             settings = GuardSettings(
                 max_allowed_people=int(self.entries["max_allowed_people"].get().strip()),
@@ -2093,15 +1607,20 @@ class ChillGuardApp:
                     for line in self.blacklist_text.get("1.0", "end").splitlines()
                     if line.strip()
                 ],
-                model_name=self.model_var.get().strip() or "yolo11n.pt",
+                model_name=self.model_var.get().strip() or "yolo26s.pt",
                 inference_backend=self.backend_var.get(),
-                start_stop_hotkey=self.normalize_hotkey(self.start_stop_hotkey_var.get().strip()) or GuardSettings().start_stop_hotkey,
-                mute_hold_hotkey=self.normalize_hotkey(self.mute_hold_hotkey_var.get().strip()) or GuardSettings().mute_hold_hotkey,
+                language=previous.language,
+                camera_width=previous.camera_width,
+                camera_height=previous.camera_height,
+                start_stop_hotkey=saved_hotkey(self.start_stop_hotkey_var, "start_stop_hotkey"),
+                mute_hold_hotkey=saved_hotkey(self.mute_hold_hotkey_var, "mute_hold_hotkey"),
                 launch_at_login=self.launch_at_login_var.get(),
             )
         except ValueError as exc:
             raise ValueError("Some parameters are invalid. Check the numeric fields.") from exc
 
+        if not all(math.isfinite(getattr(settings, name)) for name in self.entries):
+            raise ValueError("Some parameters are invalid. Check the numeric fields.")
         if not 0.1 <= settings.frame_scale <= 1.0:
             raise ValueError("Frame scale should be between 0.1 and 1.0.")
         if not 0.05 <= settings.confidence_threshold <= 1.0:
@@ -2114,6 +1633,16 @@ class ChillGuardApp:
             raise ValueError("Trigger frames must be at least 1.")
         if settings.camera_index < 0:
             raise ValueError("Camera index cannot be negative.")
+        if settings.cooldown_seconds < 0:
+            raise ValueError("Cooldown cannot be negative.")
+        if min(settings.self_box_expand_x, settings.self_box_expand_y_top, settings.self_box_expand_y_bottom) < 0:
+            raise ValueError("Ignore-zone expansions cannot be negative.")
+        if not 0.05 <= settings.self_track_min_confidence <= 1.0:
+            raise ValueError("Tracking confidence should be between 0.05 and 1.0.")
+        if settings.self_track_max_misses < 0:
+            raise ValueError("Missed-frame tolerance cannot be negative.")
+        if not 0 <= settings.min_risk_box_area_ratio <= 1:
+            raise ValueError("Risk-box area ratio should be between 0 and 1.")
         if settings.max_allowed_people < 1:
             raise ValueError("Allowed people must be at least 1, including the main user.")
         if settings.inference_backend not in ("auto", "coreml", "pytorch"):
@@ -2131,12 +1660,13 @@ class ChillGuardApp:
         try:
             settings = self.parse_settings()
         except ValueError as exc:
-            messagebox.showerror("Invalid Settings", str(exc))
+            messagebox.showerror(self.ui.t("Invalid Settings"), self.ui.language.system(str(exc)), parent=self.root)
             return False
 
         previous_settings = self.runtime.get_settings()
         self.runtime.update_settings(settings)
         save_settings(settings)
+        self.pending_hotkeys = {}
         hotkey_changed = (
             previous_settings.start_stop_hotkey != settings.start_stop_hotkey
             or previous_settings.mute_hold_hotkey != settings.mute_hold_hotkey
@@ -2177,6 +1707,7 @@ class ChillGuardApp:
 
     def on_preview_toggled(self):
         self.runtime.set_preview_enabled(self.preview_var.get())
+        save_settings(self.runtime.get_settings())
         self.refresh_form_summaries()
         if self.preview_var.get():
             self.set_status("Preview enabled")
@@ -2414,6 +1945,9 @@ class ChillGuardApp:
         target_name = self.hotkey_capture_target
         self.cancel_hotkey_capture()
         self.set_hotkey_var(target_name, hotkey_value)
+        if not hasattr(self, "pending_hotkeys"):
+            self.pending_hotkeys = {}
+        self.pending_hotkeys["start_stop_hotkey" if target_name == "start_stop" else "mute_hold_hotkey"] = hotkey_value
         self.apply_settings()
         append_log(f"Hotkey captured: target={target_name} value={hotkey_value}")
         self.set_status(f"Hotkey updated to {self.format_hotkey_display(hotkey_value)}")
@@ -2896,68 +2430,20 @@ class ChillGuardApp:
             self.start_monitoring()
 
     def refresh_preview(self):
-        frame = self.runtime.get_latest_preview()
-        if frame is None:
-            if not self.runtime.running:
-                self.preview_label.configure(image="", text="Preview will appear here after monitoring starts.", style="PreviewPlaceholder.TLabel")
-            elif not self.preview_var.get():
-                self.preview_label.configure(image="", text="Preview is disabled, but monitoring is still running.", style="PreviewPlaceholder.TLabel")
-        else:
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            image = Image.fromarray(rgb_frame)
-            max_width = self.preview_label.winfo_width()
-            max_height = self.preview_label.winfo_height()
-            if max_width <= 0:
-                max_width = 540
-            if max_height <= 0:
-                max_height = 320
-            target_size = (max(1, int(max_width)), max(1, int(max_height)))
-            # Keep edge entrants visible; pad instead of cropping the camera feed.
-            image = ImageOps.pad(image, target_size, method=Image.Resampling.LANCZOS, color="#edf2f7")
-            self.preview_image = ImageTk.PhotoImage(image=image)
-            self.preview_label.configure(image=self.preview_image, text="", style="PreviewImage.TLabel")
-
+        self.ui.update_preview(self.runtime.get_latest_preview())
         self.update_runtime_chips()
         self.root.after(80, self.refresh_preview)
 
     def reset_defaults(self):
-        defaults = GuardSettings()
-        values = {
-            "max_allowed_people": defaults.max_allowed_people,
-            "cooldown_seconds": defaults.cooldown_seconds,
-            "camera_index": defaults.camera_index,
-            "trigger_frame_threshold": defaults.trigger_frame_threshold,
-            "frame_scale": defaults.frame_scale,
-            "confidence_threshold": defaults.confidence_threshold,
-            "detect_imgsz": defaults.detect_imgsz,
-            "self_box_expand_x": defaults.self_box_expand_x,
-            "self_box_expand_y_top": defaults.self_box_expand_y_top,
-            "self_box_expand_y_bottom": defaults.self_box_expand_y_bottom,
-            "self_track_max_misses": defaults.self_track_max_misses,
-            "self_track_min_confidence": defaults.self_track_min_confidence,
-            "min_risk_box_area_ratio": defaults.min_risk_box_area_ratio,
-            "far_target_confidence": defaults.far_target_confidence,
-        }
-
-        for key, value in values.items():
-            self.entries[key].delete(0, "end")
-            self.entries[key].insert(0, str(value))
-
-        self.preview_var.set(defaults.preview_enabled)
-        self.alert_sound_var.set(defaults.alert_sound_enabled)
-        self.far_target_boost_var.set(defaults.far_target_boost_enabled)
-        self.model_var.set(defaults.model_name)
-        self.backend_var.set(defaults.inference_backend)
-        self.start_stop_hotkey_var.set(self.format_hotkey_display(defaults.start_stop_hotkey))
-        self.mute_hold_hotkey_var.set(self.format_hotkey_display(defaults.mute_hold_hotkey))
-        self.launch_at_login_var.set(defaults.launch_at_login)
-        self.blacklist_text.delete("1.0", "end")
-        self.blacklist_text.insert("1.0", "\n".join(defaults.blacklist_apps))
-        self.runtime.update_settings(defaults)
-        save_settings(defaults)
-        self.restart_hotkey_listener()
-        self.refresh_form_summaries()
-        self.render_blacklist_chips()
+        settings, defaults = self.runtime.get_settings(), GuardSettings()
+        preserved = {"blacklist_apps", "start_stop_hotkey", "mute_hold_hotkey", "launch_at_login",
+                     "language", "preview_enabled", "alert_sound_enabled"}
+        for name in defaults.__dataclass_fields__:
+            if name not in preserved:
+                setattr(settings, name, getattr(defaults, name))
+        self.runtime.update_settings(settings)
+        save_settings(settings)
+        self.populate_form_from_settings(settings)
         self.set_status("Defaults restored")
 
     def populate_form_from_settings(self, settings):
@@ -3015,7 +2501,7 @@ def main():
         parser = argparse.ArgumentParser(description="Check local inference using an image; no camera or app actions")
         parser.add_argument("image", type=Path)
         parser.add_argument("--backend", choices=("auto", "coreml", "pytorch"), default="auto")
-        parser.add_argument("--model", default="yolo11s.pt")
+        parser.add_argument("--model", default="yolo26s.pt")
         parser.add_argument("--imgsz", type=int, default=1280)
         parser.add_argument("--report", type=Path, required=True)
         args = parser.parse_args(sys.argv[2:])
@@ -3026,7 +2512,7 @@ def main():
                                    (RESOURCE_DIR / ".models", RESOURCE_DIR / "models", APP_SUPPORT_DIR / "models"))
         detections = detector.detect(frame, 0.30, args.imgsz)
         args.report.parent.mkdir(parents=True, exist_ok=True)
-        args.report.write_text(json.dumps({"backend": detector.description, "notice": detector.notice,
+        args.report.write_text(json.dumps({"model": args.model, "backend": detector.description, "notice": detector.notice,
                                           "detections": detections}, indent=2) + "\n", encoding="utf-8")
         return
     append_log("Application starting")

@@ -1,0 +1,38 @@
+{
+  "reference_pixels": [
+    1536,
+    1024
+  ],
+  "reference_window_bounds": [
+    20,
+    26,
+    1516,
+    997
+  ],
+  "implemented_content_points": [
+    1120,
+    760
+  ],
+  "minimum_content_points": [
+    1000,
+    690
+  ],
+  "dpr": 2,
+  "tokens": {
+    "white": "#FFFFFF",
+    "rail": "#EFF3F8",
+    "ink": "#17202D",
+    "muted": "#58677B",
+    "line": "#DFE5EE",
+    "blue": "#005FCC",
+    "preview": "#F1F5FA"
+  },
+  "regions": {
+    "navigation": "204 points, active rounded 42-point rows",
+    "preview": "flexible main left region, whole frame padded",
+    "inspector": "292 points; model/rules and six real application rows",
+    "shortcuts": "full-width bottom panel",
+    "language": "visible upper-right 118\u00d728-point control"
+  },
+  "comparison_limit": "Native title bar, real text and practical minimum make pixel-identical reference dimensions inapplicable. Judge layout regions and craft from full native captures; no web comp-diff score claimed."
+}

@@ -1,0 +1,9 @@
+{
+  "workflow": "comp-led",
+  "platform": "macos",
+  "selected_comp": "design/concepts/01-macos-air.png",
+  "artifact": "chill_guard_ui.py",
+  "authority": "User delegated autonomous evaluation and selection of five Imagegen directions",
+  "capture_method": "Native macOS window screenshot, CUA interactions, dedicated read-only MCP capture",
+  "mechanical_detector": "Web detector not applicable to Python native UI"
+}

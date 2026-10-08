@@ -48,8 +48,8 @@ class SettingsTests(unittest.TestCase):
             with patch.object(app, "SETTINGS_PATH", path):
                 settings = app.load_settings()
         self.assertEqual(settings.blacklist_apps, app.DEFAULT_BLACKLIST)
-        self.assertEqual(settings.model_name, "yolo11s.pt")
-        self.assertEqual(settings.inference_backend, "pytorch")
+        self.assertEqual(settings.model_name, "yolo26s.pt")
+        self.assertEqual(settings.inference_backend, "coreml")
 
 
 class MonitorTests(unittest.TestCase):

@@ -40,10 +40,10 @@ Confirm the enabled item is the exact `Chill Guard.app` you are running.
 
 1. Open `Chill Guard`
 2. Check the camera and detection settings in `Detection`
-3. Capture `Start / Stop` and `Hold to Mute` hotkeys in `Hotkeys`
-4. Fill the apps you want protected in the blacklist
-5. Click `Apply Settings`
-6. Click `Start Monitoring`
+3. Capture `Start / Stop` and `Hold to Mute` hotkeys in `Shortcuts & startup`
+4. Add applications or their exact process names in `Protected apps`
+5. Click `Save changes`
+6. Click `Start protection` in Overview
 
 ## Main Features
 
@@ -51,14 +51,13 @@ Confirm the enabled item is the exact `Chill Guard.app` you are running.
 - `Hold to Mute hotkey`: temporarily mutes alerts while held
 - `Preview`: shows the live camera frame
 - `Alert Sound`: plays a local warning sound when risk is triggered
-- `Apps to Hide`: list of apps to switch or hide after risk is detected
+- `Protected apps`: list of applications to hide when the configured rules trigger
 
 ## Inference Backend
 
-In Detection, `Inference` offers `pytorch` (default), `coreml`, and `auto`.
-Core ML requires a matching prepared export and a runtime dependency, both included when the builder follows [Apple inference setup](APPLE_INFERENCE.md). `auto` prefers that export; otherwise it uses PyTorch. `coreml` also falls back to PyTorch if the export is missing or fails, and the status/log reports the reason and actual backend. Changing Model File, Inference, or Detect Size while monitoring reloads the detector.
+Version 1.2 defaults to YOLO26s and Apple Core ML at 1280. Detection offers Apple Core ML, Automatic, and PyTorch compatibility. The local build includes a matching native export. Missing, incompatible or failed native inference switches visibly to PyTorch. Changing the model, engine or size while monitoring reloads the detector. See [Apple inference setup](APPLE_INFERENCE.md).
 
-Keep Model File set to the source `.pt` file, such as `yolo11s.pt`. The native export is selected by model checksum and detection size. With a 640 export, long-range boost requests 1280 and falls back to PyTorch; prepare the default 1280 export to use Core ML for both passes.
+Overview shows the configured engine before monitoring and the actual engine while running. Chinese/English can be switched using the visible top-right control or Command+Shift+L. Language switching preserves pending edits. App names and recorded keycodes are not translated. Long forms scroll, and Command+1–4 opens each page; Command+S saves changes.
 
 Settings, including trigger frames, model choice, and inference backend, are preserved on restart. Hold to Mute suppresses both sound and hiding while detection continues. Preview keeps the complete camera frame with padding, so people at the edges remain visible.
 

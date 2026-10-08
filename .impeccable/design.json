@@ -1,0 +1,749 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-08T11:20:20.460346+00:00",
+  "title": "Design System: Chill Guard — macOS Air",
+  "extensions": {
+    "colorMeta": {
+      "blue": {
+        "role": "primary",
+        "displayName": "Clear Action Blue",
+        "canonical": "#005FCC",
+        "tonalRamp": [
+          "oklch(15.0% 0.18548 257.73)",
+          "oklch(26.4% 0.18548 257.73)",
+          "oklch(37.9% 0.18548 257.73)",
+          "oklch(49.3% 0.18548 257.73)",
+          "oklch(60.7% 0.18548 257.73)",
+          "oklch(72.1% 0.18548 257.73)",
+          "oklch(83.6% 0.18548 257.73)",
+          "oklch(95.0% 0.18548 257.73)"
+        ]
+      },
+      "blue-hover": {
+        "role": "primary",
+        "displayName": "Action Blue Hover",
+        "canonical": "#0562D9",
+        "tonalRamp": [
+          "oklch(15.0% 0.19800 258.80)",
+          "oklch(26.4% 0.19800 258.80)",
+          "oklch(37.9% 0.19800 258.80)",
+          "oklch(49.3% 0.19800 258.80)",
+          "oklch(60.7% 0.19800 258.80)",
+          "oklch(72.1% 0.19800 258.80)",
+          "oklch(83.6% 0.19800 258.80)",
+          "oklch(95.0% 0.19800 258.80)"
+        ]
+      },
+      "selected": {
+        "role": "primary",
+        "displayName": "Pale Selection Blue",
+        "canonical": "#DDEBFF",
+        "tonalRamp": [
+          "oklch(15.0% 0.03103 257.23)",
+          "oklch(26.4% 0.03103 257.23)",
+          "oklch(37.9% 0.03103 257.23)",
+          "oklch(49.3% 0.03103 257.23)",
+          "oklch(60.7% 0.03103 257.23)",
+          "oklch(72.1% 0.03103 257.23)",
+          "oklch(83.6% 0.03103 257.23)",
+          "oklch(95.0% 0.03103 257.23)"
+        ]
+      },
+      "white": {
+        "role": "neutral",
+        "displayName": "Clean White",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "oklch(15.0% 0.00000 0.00)",
+          "oklch(26.4% 0.00000 0.00)",
+          "oklch(37.9% 0.00000 0.00)",
+          "oklch(49.3% 0.00000 0.00)",
+          "oklch(60.7% 0.00000 0.00)",
+          "oklch(72.1% 0.00000 0.00)",
+          "oklch(83.6% 0.00000 0.00)",
+          "oklch(95.0% 0.00000 0.00)"
+        ]
+      },
+      "rail": {
+        "role": "neutral",
+        "displayName": "Air Rail",
+        "canonical": "#EFF3F8",
+        "tonalRamp": [
+          "oklch(15.0% 0.00795 253.85)",
+          "oklch(26.4% 0.00795 253.85)",
+          "oklch(37.9% 0.00795 253.85)",
+          "oklch(49.3% 0.00795 253.85)",
+          "oklch(60.7% 0.00795 253.85)",
+          "oklch(72.1% 0.00795 253.85)",
+          "oklch(83.6% 0.00795 253.85)",
+          "oklch(95.0% 0.00795 253.85)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Deep Ink",
+        "canonical": "#17202D",
+        "tonalRamp": [
+          "oklch(15.0% 0.02827 257.53)",
+          "oklch(26.4% 0.02827 257.53)",
+          "oklch(37.9% 0.02827 257.53)",
+          "oklch(49.3% 0.02827 257.53)",
+          "oklch(60.7% 0.02827 257.53)",
+          "oklch(72.1% 0.02827 257.53)",
+          "oklch(83.6% 0.02827 257.53)",
+          "oklch(95.0% 0.02827 257.53)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Slate Secondary",
+        "canonical": "#58677B",
+        "tonalRamp": [
+          "oklch(15.0% 0.03680 255.69)",
+          "oklch(26.4% 0.03680 255.69)",
+          "oklch(37.9% 0.03680 255.69)",
+          "oklch(49.3% 0.03680 255.69)",
+          "oklch(60.7% 0.03680 255.69)",
+          "oklch(72.1% 0.03680 255.69)",
+          "oklch(83.6% 0.03680 255.69)",
+          "oklch(95.0% 0.03680 255.69)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#DFE5EE",
+        "tonalRamp": [
+          "oklch(15.0% 0.01383 258.35)",
+          "oklch(26.4% 0.01383 258.35)",
+          "oklch(37.9% 0.01383 258.35)",
+          "oklch(49.3% 0.01383 258.35)",
+          "oklch(60.7% 0.01383 258.35)",
+          "oklch(72.1% 0.01383 258.35)",
+          "oklch(83.6% 0.01383 258.35)",
+          "oklch(95.0% 0.01383 258.35)"
+        ]
+      },
+      "preview": {
+        "role": "neutral",
+        "displayName": "Camera Air",
+        "canonical": "#F1F5FA",
+        "tonalRamp": [
+          "oklch(15.0% 0.00794 253.85)",
+          "oklch(26.4% 0.00794 253.85)",
+          "oklch(37.9% 0.00794 253.85)",
+          "oklch(49.3% 0.00794 253.85)",
+          "oklch(60.7% 0.00794 253.85)",
+          "oklch(72.1% 0.00794 253.85)",
+          "oklch(83.6% 0.00794 253.85)",
+          "oklch(95.0% 0.00794 253.85)"
+        ]
+      },
+      "secondary": {
+        "role": "neutral",
+        "displayName": "Quiet Control",
+        "canonical": "#F2F5F9",
+        "tonalRamp": [
+          "oklch(15.0% 0.00624 255.47)",
+          "oklch(26.4% 0.00624 255.47)",
+          "oklch(37.9% 0.00624 255.47)",
+          "oklch(49.3% 0.00624 255.47)",
+          "oklch(60.7% 0.00624 255.47)",
+          "oklch(72.1% 0.00624 255.47)",
+          "oklch(83.6% 0.00624 255.47)",
+          "oklch(95.0% 0.00624 255.47)"
+        ]
+      },
+      "secondary-hover": {
+        "role": "neutral",
+        "displayName": "Quiet Control Hover",
+        "canonical": "#E4EBF4",
+        "tonalRamp": [
+          "oklch(15.0% 0.01431 254.61)",
+          "oklch(26.4% 0.01431 254.61)",
+          "oklch(37.9% 0.01431 254.61)",
+          "oklch(49.3% 0.01431 254.61)",
+          "oklch(60.7% 0.01431 254.61)",
+          "oklch(72.1% 0.01431 254.61)",
+          "oklch(83.6% 0.01431 254.61)",
+          "oklch(95.0% 0.01431 254.61)"
+        ]
+      },
+      "language-track": {
+        "role": "neutral",
+        "displayName": "Language Track",
+        "canonical": "#F1F3F7",
+        "tonalRamp": [
+          "oklch(15.0% 0.00576 264.53)",
+          "oklch(26.4% 0.00576 264.53)",
+          "oklch(37.9% 0.00576 264.53)",
+          "oklch(49.3% 0.00576 264.53)",
+          "oklch(60.7% 0.00576 264.53)",
+          "oklch(72.1% 0.00576 264.53)",
+          "oklch(83.6% 0.00576 264.53)",
+          "oklch(95.0% 0.00576 264.53)"
+        ]
+      },
+      "status-surface": {
+        "role": "neutral",
+        "displayName": "Status Surface",
+        "canonical": "#F6F8FB",
+        "tonalRamp": [
+          "oklch(15.0% 0.00453 258.32)",
+          "oklch(26.4% 0.00453 258.32)",
+          "oklch(37.9% 0.00453 258.32)",
+          "oklch(49.3% 0.00453 258.32)",
+          "oklch(60.7% 0.00453 258.32)",
+          "oklch(72.1% 0.00453 258.32)",
+          "oklch(83.6% 0.00453 258.32)",
+          "oklch(95.0% 0.00453 258.32)"
+        ]
+      },
+      "app-row": {
+        "role": "neutral",
+        "displayName": "Editable App Row",
+        "canonical": "#F8FAFC",
+        "tonalRamp": [
+          "oklch(15.0% 0.00341 247.86)",
+          "oklch(26.4% 0.00341 247.86)",
+          "oklch(37.9% 0.00341 247.86)",
+          "oklch(49.3% 0.00341 247.86)",
+          "oklch(60.7% 0.00341 247.86)",
+          "oklch(72.1% 0.00341 247.86)",
+          "oklch(83.6% 0.00341 247.86)",
+          "oklch(95.0% 0.00341 247.86)"
+        ]
+      },
+      "readonly": {
+        "role": "neutral",
+        "displayName": "Readonly Field",
+        "canonical": "#F7F9FC",
+        "tonalRamp": [
+          "oklch(15.0% 0.00453 258.32)",
+          "oklch(26.4% 0.00453 258.32)",
+          "oklch(37.9% 0.00453 258.32)",
+          "oklch(49.3% 0.00453 258.32)",
+          "oklch(60.7% 0.00453 258.32)",
+          "oklch(72.1% 0.00453 258.32)",
+          "oklch(83.6% 0.00453 258.32)",
+          "oklch(95.0% 0.00453 258.32)"
+        ]
+      },
+      "shortcut": {
+        "role": "neutral",
+        "displayName": "Shortcut Keycap",
+        "canonical": "#F0F3F7",
+        "tonalRamp": [
+          "oklch(15.0% 0.00625 255.48)",
+          "oklch(26.4% 0.00625 255.48)",
+          "oklch(37.9% 0.00625 255.48)",
+          "oklch(49.3% 0.00625 255.48)",
+          "oklch(60.7% 0.00625 255.48)",
+          "oklch(72.1% 0.00625 255.48)",
+          "oklch(83.6% 0.00625 255.48)",
+          "oklch(95.0% 0.00625 255.48)"
+        ]
+      },
+      "switch-off": {
+        "role": "neutral",
+        "displayName": "Switch Off Track",
+        "canonical": "#D0D7E2",
+        "tonalRamp": [
+          "oklch(15.0% 0.01695 259.42)",
+          "oklch(26.4% 0.01695 259.42)",
+          "oklch(37.9% 0.01695 259.42)",
+          "oklch(49.3% 0.01695 259.42)",
+          "oklch(60.7% 0.01695 259.42)",
+          "oklch(72.1% 0.01695 259.42)",
+          "oklch(83.6% 0.01695 259.42)",
+          "oklch(95.0% 0.01695 259.42)"
+        ]
+      },
+      "switch-thumb-hover": {
+        "role": "neutral",
+        "displayName": "Switch Thumb Hover",
+        "canonical": "#DCE6F5",
+        "tonalRamp": [
+          "oklch(15.0% 0.02308 258.36)",
+          "oklch(26.4% 0.02308 258.36)",
+          "oklch(37.9% 0.02308 258.36)",
+          "oklch(49.3% 0.02308 258.36)",
+          "oklch(60.7% 0.02308 258.36)",
+          "oklch(72.1% 0.02308 258.36)",
+          "oklch(83.6% 0.02308 258.36)",
+          "oklch(95.0% 0.02308 258.36)"
+        ]
+      },
+      "menu-button": {
+        "role": "neutral",
+        "displayName": "Menu Arrow Surface",
+        "canonical": "#E8EDF5",
+        "tonalRamp": [
+          "oklch(15.0% 0.01204 259.82)",
+          "oklch(26.4% 0.01204 259.82)",
+          "oklch(37.9% 0.01204 259.82)",
+          "oklch(49.3% 0.01204 259.82)",
+          "oklch(60.7% 0.01204 259.82)",
+          "oklch(72.1% 0.01204 259.82)",
+          "oklch(83.6% 0.01204 259.82)",
+          "oklch(95.0% 0.01204 259.82)"
+        ]
+      },
+      "menu-button-hover": {
+        "role": "neutral",
+        "displayName": "Menu Arrow Hover",
+        "canonical": "#DCE5F2",
+        "tonalRamp": [
+          "oklch(15.0% 0.02018 257.47)",
+          "oklch(26.4% 0.02018 257.47)",
+          "oklch(37.9% 0.02018 257.47)",
+          "oklch(49.3% 0.02018 257.47)",
+          "oklch(60.7% 0.02018 257.47)",
+          "oklch(72.1% 0.02018 257.47)",
+          "oklch(83.6% 0.02018 257.47)",
+          "oklch(95.0% 0.02018 257.47)"
+        ]
+      },
+      "menu-item-hover": {
+        "role": "neutral",
+        "displayName": "Menu Item Hover",
+        "canonical": "#E4EEFF",
+        "tonalRamp": [
+          "oklch(15.0% 0.02535 261.15)",
+          "oklch(26.4% 0.02535 261.15)",
+          "oklch(37.9% 0.02535 261.15)",
+          "oklch(49.3% 0.02535 261.15)",
+          "oklch(60.7% 0.02535 261.15)",
+          "oklch(72.1% 0.02535 261.15)",
+          "oklch(83.6% 0.02535 261.15)",
+          "oklch(95.0% 0.02535 261.15)"
+        ]
+      },
+      "scrollbar": {
+        "role": "neutral",
+        "displayName": "Scrollbar",
+        "canonical": "#D5DDE8",
+        "tonalRamp": [
+          "oklch(15.0% 0.01739 256.29)",
+          "oklch(26.4% 0.01739 256.29)",
+          "oklch(37.9% 0.01739 256.29)",
+          "oklch(49.3% 0.01739 256.29)",
+          "oklch(60.7% 0.01739 256.29)",
+          "oklch(72.1% 0.01739 256.29)",
+          "oklch(83.6% 0.01739 256.29)",
+          "oklch(95.0% 0.01739 256.29)"
+        ]
+      },
+      "scrollbar-hover": {
+        "role": "neutral",
+        "displayName": "Scrollbar Hover",
+        "canonical": "#AEBBCB",
+        "tonalRamp": [
+          "oklch(15.0% 0.02694 253.60)",
+          "oklch(26.4% 0.02694 253.60)",
+          "oklch(37.9% 0.02694 253.60)",
+          "oklch(49.3% 0.02694 253.60)",
+          "oklch(60.7% 0.02694 253.60)",
+          "oklch(72.1% 0.02694 253.60)",
+          "oklch(83.6% 0.02694 253.60)",
+          "oklch(95.0% 0.02694 253.60)"
+        ]
+      },
+      "running": {
+        "role": "semantic",
+        "displayName": "Running Green",
+        "canonical": "#21835A",
+        "tonalRamp": [
+          "oklch(15.0% 0.10973 160.62)",
+          "oklch(26.4% 0.10973 160.62)",
+          "oklch(37.9% 0.10973 160.62)",
+          "oklch(49.3% 0.10973 160.62)",
+          "oklch(60.7% 0.10973 160.62)",
+          "oklch(72.1% 0.10973 160.62)",
+          "oklch(83.6% 0.10973 160.62)",
+          "oklch(95.0% 0.10973 160.62)"
+        ]
+      },
+      "muted-state": {
+        "role": "semantic",
+        "displayName": "Muted Amber",
+        "canonical": "#886016",
+        "tonalRamp": [
+          "oklch(15.0% 0.09966 77.45)",
+          "oklch(26.4% 0.09966 77.45)",
+          "oklch(37.9% 0.09966 77.45)",
+          "oklch(49.3% 0.09966 77.45)",
+          "oklch(60.7% 0.09966 77.45)",
+          "oklch(72.1% 0.09966 77.45)",
+          "oklch(83.6% 0.09966 77.45)",
+          "oklch(95.0% 0.09966 77.45)"
+        ]
+      },
+      "error": {
+        "role": "semantic",
+        "displayName": "Error Red",
+        "canonical": "#BC3D42",
+        "tonalRamp": [
+          "oklch(15.0% 0.16279 22.22)",
+          "oklch(26.4% 0.16279 22.22)",
+          "oklch(37.9% 0.16279 22.22)",
+          "oklch(49.3% 0.16279 22.22)",
+          "oklch(60.7% 0.16279 22.22)",
+          "oklch(72.1% 0.16279 22.22)",
+          "oklch(83.6% 0.16279 22.22)",
+          "oklch(95.0% 0.16279 22.22)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page title."
+      },
+      "brand": {
+        "displayName": "Brand",
+        "purpose": "Chill Guard product name."
+      },
+      "empty-state": {
+        "displayName": "Empty State",
+        "purpose": "Camera empty-state title."
+      },
+      "section-title": {
+        "displayName": "Section Title",
+        "purpose": "Settings group and inspector title."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Form labels and regular controls."
+      },
+      "action": {
+        "displayName": "Action",
+        "purpose": "Bold primary-action label."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Supporting copy and compact app names."
+      },
+      "status": {
+        "displayName": "Status",
+        "purpose": "Written protection-state title."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Metadata and form feedback."
+      },
+      "fine-print": {
+        "displayName": "Fine Print",
+        "purpose": "Local-processing footer and status note."
+      },
+      "keycap": {
+        "displayName": "Keycap",
+        "purpose": "Saved shortcut display."
+      }
+    },
+    "shadows": [],
+    "motion": [],
+    "breakpoints": [],
+    "nativePlatform": {
+      "platform": "macOS",
+      "implementation": [
+        "CustomTkinter",
+        "AppKit"
+      ],
+      "source": "chill_guard_ui.py",
+      "window": {
+        "defaultContentPoints": [
+          1120,
+          760
+        ],
+        "minimumContentPoints": [
+          1000,
+          690
+        ],
+        "observedDpr": 2,
+        "chrome": "Native title bar with Aqua appearance and transparent titlebar treatment."
+      },
+      "geometry": {
+        "railLogicalUnits": 204,
+        "toolbarHeightLogicalUnits": 44,
+        "pageInsetLogicalUnits": 22,
+        "inspectorWidthLogicalUnits": 292,
+        "overviewColumnGapLogicalUnits": 14,
+        "cameraPrimaryActionLogicalUnits": [
+          156,
+          38
+        ],
+        "saveActionLogicalUnits": [
+          128,
+          34
+        ],
+        "languageGroupLogicalUnits": [
+          118,
+          28
+        ],
+        "languageSegmentLogicalUnits": [
+          55,
+          24
+        ],
+        "navigationLogicalUnits": [
+          172,
+          42
+        ],
+        "switchTrackLogicalUnits": [
+          36,
+          20
+        ]
+      },
+      "typeUnits": "Frontmatter px strings preserve positive CustomTkinter font-size numbers. They are not evidence of CSS pixels, rendered screenshot dimensions, or measured font metrics.",
+      "symbols": "Native SF symbol image assets and authentic installed application icon assets. The reference camera-slash drawing is adapted, not a binding logo.",
+      "depth": "No authored in-app shadows, gradients, glass, or tween/easing tokens; tonal layers and one-unit borders define depth.",
+      "resizeBehavior": "Fixed rail and inspector; flexible camera/content; intentional scrolling in forms. No web or mobile breakpoints."
+    },
+    "behavior": {
+      "languageControl": [
+        "中文",
+        "EN"
+      ],
+      "languageLocation": "Upper-right toolbar on every page.",
+      "languageChanges": "Immediate persisted update across UI feedback, dialogs, menus and Dock/menu integration; pending form edits are preserved.",
+      "saveExplicit": [
+        "Detection parameters",
+        "Protected-app list edits",
+        "Global shortcuts"
+      ],
+      "saveImmediate": [
+        "Language",
+        "Camera preview preference",
+        "Launch at login"
+      ],
+      "identityPreserved": [
+        "Chill Guard name",
+        "Exact application/process names",
+        "Stored shortcut keycodes"
+      ],
+      "savedApplicationsObserved": [
+        "Safari",
+        "iPhone Mirroring",
+        "WeChat",
+        "Telegram",
+        "QQ Music",
+        "Photos"
+      ],
+      "overviewListBehavior": "First six saved rows, plus Manage all applications when the list has more entries. The stored list is not capped at six.",
+      "savedStartStopDisplay": "Cmd + Ctrl + Option + minus; modifier glyphs are a display adaptation only, not an alternate keycode representation.",
+      "stateSemantics": "Written state and supporting note; configured inference in standby, actual backend after detector load.",
+      "preview": "Whole-frame padding; hiding preview continues detection. Static states do not certify camera or app-hiding behavior.",
+      "keyboardSourceBindings": [
+        "Return / Space activate drawn buttons",
+        "Space toggles switches",
+        "Space opens model/engine menu",
+        "Command–1 through Command–4 select pages",
+        "Command–S saves",
+        "Command–Shift–L switches language",
+        "Detection fields scroll into view on focus"
+      ],
+      "accessibilityLimit": "Source bindings and visible focus are documented; full accessibility and permission-dependent global shortcut operation are unaccepted."
+    },
+    "workflowProvenance": {
+      "sessionOnly": true,
+      "sequence": [
+        "First code-led UI rejected by the user",
+        "Five Imagegen directions requested",
+        "Evaluation and selection delegated by the user",
+        "01 macOS Air selected",
+        "Real native code recreated against selected image"
+      ],
+      "selectedComp": "design/concepts/01-macos-air.png",
+      "selectedContract": "design/SELECTED_DIRECTION.md",
+      "supersedes": "Prior DESIGN.md private-workspace direction; replacement was authorized by this session.",
+      "factualAdaptations": [
+        "Actual eligible-person/count and consecutive-frame rule",
+        "Saved Ctrl modifier rather than generated Shift",
+        "Actual stored rule values rather than generated sensitivity preset",
+        "Actual configured/loaded inference distinction",
+        "Native title chrome, SF assets and installed app icons",
+        "Scrollable forms for all fields"
+      ]
+    },
+    "evidence": {
+      "documentationSourceFiles": [
+        "PRODUCT.md",
+        "design/SELECTED_DIRECTION.md",
+        "design/QUALITY_BAR.md",
+        "design/concepts/EVALUATION.md",
+        ".impeccable/build/state.json",
+        ".impeccable/build/spec.json",
+        "chill_guard_ui.py"
+      ],
+      "finalCapturesInspected": [
+        ".impeccable/review/overview-zh-default.jpg",
+        ".impeccable/review/overview-en-default.jpg",
+        ".impeccable/review/overview-zh-min.jpg",
+        ".impeccable/review/overview-en-min.jpg",
+        ".impeccable/review/apps-en-default.jpg"
+      ],
+      "finalCaptureScope": "Overview Chinese/English at default and minimum sizes, Protected apps English at default size; final palette and complete rows.",
+      "priorCaptures": "Other native captures remain earlier confirmation evidence and are not final palette authority.",
+      "reviewReportedByHandoff": {
+        "freshIndependentReviewFindings": [
+          "Minimum-size Photos row clipping",
+          "Text contrast"
+        ],
+        "resolvedByVerdictPass": true,
+        "disposition": "ship",
+        "dispositionScope": "Fix list only; no new full review acceptance claim."
+      },
+      "diagnosticsReportedByHandoff": {
+        "offlineNativeAndFallback": "pass",
+        "testsPassed": 25
+      },
+      "unaccepted": [
+        "System Accessibility permission remains unauthorized",
+        "Permission-dependent global shortcut operation",
+        "Representative live camera scene",
+        "Actual app-hiding acceptance",
+        "Full accessibility acceptance"
+      ],
+      "captureLimits": {
+        "maximumOutputHeightPixels": 768,
+        "nativeWindowDpr": 2,
+        "purpleIndicator": "OS sharing/capture tooling, not an app design element.",
+        "comparison": "Region and craft comparison; no web detector and no numerical comp-diff score."
+      },
+      "notCanonized": [
+        "English summary grammar > 1 people is a source wording issue, not a typographic or copy rule."
+      ],
+      "documenterActions": "Read-only source and capture extraction; only DESIGN.md and .impeccable/design.json written. No app launch, permission change, camera activation or software edit."
+    },
+    "previewTranslation": {
+      "purpose": "Self-contained browser documentation samples of native component roles. They do not implement the native app or validate native operation.",
+      "tokens": "Resolved literal values because the production tokens live in Python, not inherited CSS custom properties.",
+      "icons": "Samples omit platform/application icon assets; native identity comes from those real assets, not surrogate logos.",
+      "focus": "Browser focus-visible outlines on field, segmented control and switch are panel affordances, not separately authored native field-focus tokens.",
+      "tonalRamps": "Eight synthetic OKLCH lightness steps per source color for the documentation swatch panel only; not production palette tokens.",
+      "motion": "No browser transition is added as a production motion token."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Native save-action role; panel preview uses the observed 128 × 34 geometry.",
+      "html": "<button class=\"ds-primary\">Save changes</button>",
+      "css": ".ds-primary{font-family:\"SF Pro Text\",-apple-system,BlinkMacSystemFont,sans-serif;width:128px;height:34px;border:0;border-radius:9px;background:#005FCC;color:#FFFFFF;font-size:13px;font-weight:700;cursor:pointer}.ds-primary:hover{background:#0562D9}.ds-primary:focus-visible{outline:2px solid #005FCC;outline-offset:2px;}.ds-primary:active{background:#005FCC}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Quiet supporting action; native Change shortcut variant.",
+      "html": "<button class=\"ds-secondary\">Change shortcut…</button>",
+      "css": ".ds-secondary{font-family:\"SF Pro Text\",-apple-system,BlinkMacSystemFont,sans-serif;width:126px;height:34px;border:0;border-radius:9px;background:#F2F5F9;color:#17202D;font-size:13px;cursor:pointer}.ds-secondary:hover{background:#E4EBF4}.ds-secondary:focus-visible{outline:2px solid #005FCC;outline-offset:2px;}.ds-secondary:active{background:#F2F5F9}"
+    },
+    {
+      "name": "Numeric Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Right-aligned native numeric field. Browser focus outline is a panel affordance, not an extracted native field token.",
+      "html": "<label class=\"ds-field-label\">Allowed people<input class=\"ds-field\" value=\"1\" inputmode=\"numeric\" aria-label=\"Allowed people\"></label>",
+      "css": ".ds-field-label{font-family:\"SF Pro Text\",-apple-system,BlinkMacSystemFont,sans-serif;display:flex;align-items:center;gap:14px;color:#17202D;font-size:13px}.ds-field{font-family:\"SF Pro Text\",-apple-system,BlinkMacSystemFont,sans-serif;width:148px;height:32px;padding:0 8px;text-align:right;border:1px solid #DFE5EE;border-radius:7px;background:#FFFFFF;color:#17202D;font-size:13px}.ds-field:hover{border-color:#DFE5EE}.ds-field:focus-visible{outline:2px solid #005FCC;outline-offset:2px;}"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "refersTo": "navigation-active",
+      "description": "Text-only panel surrogate for the four-page native rail; actual app adds platform symbol assets.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Chill Guard pages\"><button class=\"ds-nav-item ds-nav-active\" aria-current=\"page\">Overview</button><button class=\"ds-nav-item\">Protected apps</button><button class=\"ds-nav-item\">Detection</button><button class=\"ds-nav-item\">Shortcuts</button></nav>",
+      "css": ".ds-nav{width:204px;padding:12px 0;background:#EFF3F8}.ds-nav-item{font-family:\"SF Pro Text\",-apple-system,BlinkMacSystemFont,sans-serif;display:block;width:172px;height:42px;margin:6px 12px;padding:0 12px;text-align:left;border:0;border-radius:9px;background:#EFF3F8;color:#17202D;font-size:13px;cursor:pointer}.ds-nav-item:hover{background:#E4EBF4}.ds-nav-item:focus-visible{outline:2px solid #005FCC;outline-offset:2px;}.ds-nav-active{background:#DDEBFF;color:#005FCC}.ds-nav-active:hover{background:#E4EBF4}"
+    },
+    {
+      "name": "Chinese / EN Control",
+      "kind": "custom",
+      "refersTo": "language-group",
+      "description": "Visible language selector. Native language persistence and pending-edit preservation are outside this static panel preview.",
+      "html": "<div class=\"ds-language\" role=\"group\" aria-label=\"Language\"><button class=\"ds-language-item\">中文</button><button class=\"ds-language-item ds-language-selected\" aria-pressed=\"true\">EN</button></div>",
+      "css": ".ds-language{display:flex;width:118px;height:28px;border-radius:8px;background:#F1F3F7}.ds-language-item{font-family:\"SF Pro Text\",-apple-system,BlinkMacSystemFont,sans-serif;width:55px;height:24px;margin:2px;padding:0;border:0;border-radius:6px;background:#F1F3F7;color:#58677B;font-size:13px;cursor:pointer}.ds-language-selected{background:#FFFFFF;color:#005FCC}.ds-language-item:hover{background:#E4EBF4}.ds-language-item:focus-visible{outline:2px solid #005FCC;outline-offset:2px;}"
+    },
+    {
+      "name": "State Badge",
+      "kind": "chip",
+      "refersTo": "status",
+      "description": "Text and supporting note carry state; data-state classes illustrate the native semantic colors.",
+      "html": "<div class=\"ds-status\" data-state=\"standby\"><strong class=\"ds-status-title\">● Standby</strong><span class=\"ds-status-note\">Protection has not started</span></div>",
+      "css": ".ds-status{font-family:\"SF Pro Text\",-apple-system,BlinkMacSystemFont,sans-serif;display:inline-flex;flex-direction:column;align-items:center;padding:5px 16px;border:1px solid #DFE5EE;border-radius:12px;background:#F6F8FB;color:#58677B}.ds-status-title{font-size:12px;font-weight:700}.ds-status-note{font-size:10px;margin-top:3px}.ds-status[data-state=\"running\"] .ds-status-title{color:#21835A}.ds-status[data-state=\"muted\"] .ds-status-title{color:#886016}.ds-status[data-state=\"error\"] .ds-status-title,.ds-status[data-state=\"alert\"] .ds-status-title{color:#BC3D42}.ds-status[data-state=\"starting\"] .ds-status-title{color:#005FCC}"
+    },
+    {
+      "name": "Inspector Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Native hairline container with compact title and model metadata.",
+      "html": "<article class=\"ds-panel\"><h3 class=\"ds-panel-title\">Detection configuration</h3><div class=\"ds-panel-row\"><span>Detection model</span><span>YOLO26s</span></div><div class=\"ds-panel-row\"><span>Configured engine</span><span>Apple Core ML</span></div></article>",
+      "css": ".ds-panel{font-family:\"SF Pro Text\",-apple-system,BlinkMacSystemFont,sans-serif;width:258px;padding:10px 16px 13px;border:1px solid #DFE5EE;border-radius:12px;background:#FFFFFF;color:#17202D}.ds-panel-title{margin:0 0 6px;font-size:14px;font-weight:700}.ds-panel-row{display:flex;justify-content:space-between;gap:8px;min-height:22px;margin:6px 0;font-size:11px}.ds-panel-row span:first-child{color:#58677B}"
+    },
+    {
+      "name": "Switch",
+      "kind": "custom",
+      "refersTo": "switch-track",
+      "description": "Browser surrogate for the 36 × 20 native switch track; label and native persistence semantics remain product-specific.",
+      "html": "<label class=\"ds-switch\"><input class=\"ds-switch-input\" type=\"checkbox\" checked><span class=\"ds-switch-track\"></span><span>Launch at login</span></label>",
+      "css": ".ds-switch{font-family:\"SF Pro Text\",-apple-system,BlinkMacSystemFont,sans-serif;position:relative;display:inline-flex;align-items:center;gap:9px;color:#17202D;font-size:13px;cursor:pointer}.ds-switch-input{position:absolute;left:0;width:36px;height:20px;margin:0;opacity:0}.ds-switch-track{position:relative;width:36px;height:20px;border-radius:10px;background:#D0D7E2}.ds-switch-track:after{content:\"\";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#FFFFFF}.ds-switch-input:checked+.ds-switch-track{background:#005FCC}.ds-switch-input:checked+.ds-switch-track:after{left:18px}.ds-switch:hover .ds-switch-track:after{background:#DCE6F5}.ds-switch-input:focus-visible+.ds-switch-track{outline:2px solid #005FCC;outline-offset:2px;}"
+    },
+    {
+      "name": "Editable Application Row",
+      "kind": "custom",
+      "refersTo": "app-row-editor",
+      "description": "Text-only panel surrogate; native row uses the authentic installed app icon and an image-asset remove action.",
+      "html": "<div class=\"ds-app-row\"><span class=\"ds-app-name\">Safari</span><button class=\"ds-app-remove\" aria-label=\"Remove Safari\">Remove</button></div>",
+      "css": ".ds-app-row{font-family:\"SF Pro Text\",-apple-system,BlinkMacSystemFont,sans-serif;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;padding:0 12px;border-radius:8px;background:#F8FAFC;color:#17202D;font-size:13px}.ds-app-remove{font-family:\"SF Pro Text\",-apple-system,BlinkMacSystemFont,sans-serif;height:28px;border:0;border-radius:9px;background:#F8FAFC;color:#17202D;font-size:11px;cursor:pointer}.ds-app-remove:hover{background:#E4EBF4}.ds-app-remove:focus-visible{outline:2px solid #005FCC;outline-offset:2px;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "macOS Air",
+    "overview": "A quiet, legible macOS camera utility. Pale gray navigation, white working surfaces, a restrained blue action color, and rounded hairline panels make protection state and the next action easy to read. The interface stays compact without hiding the configured applications or mixing advanced geometry into the overview.\n\nThis is a native desktop system implemented with CustomTkinter controls and AppKit integration. SF Pro Text, native window chrome, platform symbol assets, and authentic installed application icons adapt the selected image to macOS. The camera symbol is a platform asset, not a newly established logo.",
+    "keyCharacteristics": [
+      "Fixed pale navigation rail and flexible white content.",
+      "One dominant camera area, a compact inspector, and a short shortcut strip on the overview.",
+      "Textual state paired with semantic color; explicit save feedback for forms.",
+      "Visible Chinese/EN switching with stable app identities and stored keycodes."
+    ],
+    "rules": [
+      {
+        "name": "State Before Color",
+        "body": "Always show the protection state in words with its supporting note. Color supplements the words and never establishes protection by itself.",
+        "section": "colors"
+      },
+      {
+        "name": "Native Type",
+        "body": "Use the compact platform typography and Chinese system glyph fallback. Keep the brand name, application names, and shortcut identity intact across languages.",
+        "section": "typography"
+      },
+      {
+        "name": "Complete Frame",
+        "body": "Fit the whole camera frame into the preview using padding. Edge entrants must remain visible rather than being cropped for composition.",
+        "section": "layout"
+      },
+      {
+        "name": "Hairline Depth",
+        "body": "Separate panels with a light stroke and tonal surfaces. Reserve actual window elevation for macOS window chrome.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep the Chinese/EN control visible in the upper-right toolbar on every page.",
+      "Do preserve the actual six saved app identities and keycode data; display labels may change with language.",
+      "Do retain complete app rows at the minimum window size and use intentional scrolling for long forms.",
+      "Do distinguish configured inference in standby from the backend that actually loads while running.",
+      "Do show saved versus unsaved form state and provide a visible recovery action when permission or runtime feedback requires it.",
+      "Do inherit the selected macOS Air palette, compact native type, rounded controls, and hairline panels on new pages."
+    ],
+    "donts": [
+      "Don't restore the rejected code-led private-workspace direction or combine it with this chosen system.",
+      "Don't turn this session's five-image exploration and delegated selection into a permanent user workflow preference.",
+      "Don't infer active protection from standby, hidden preview, or a static screenshot.",
+      "Don't replace real app names, keycodes, saved numeric rules, or backend state with generated presets or claims.",
+      "Don't use a screenshot as a working interface or crop camera edges to imitate the concept.",
+      "Don't add in-app decorative shadows, promotional display typography, or invented telemetry to this native utility."
+    ]
+  }
+}

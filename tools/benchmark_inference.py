@@ -16,7 +16,7 @@ from person_detector import create_detector
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("images", type=Path, nargs="+")
-    parser.add_argument("--model", type=Path, default=Path("yolo11s.pt"))
+    parser.add_argument("--model", type=Path, default=Path("yolo26s.pt"))
     parser.add_argument("--imgsz", type=int, default=1280)
     parser.add_argument("--iterations", type=int, default=20)
     parser.add_argument("--output", type=Path)

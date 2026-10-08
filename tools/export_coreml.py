@@ -1,4 +1,4 @@
-"""Prepare a verified, offline YOLO11 COCO export for Chill Guard."""
+"""Prepare a verified, offline YOLO11/YOLO26 COCO export for Chill Guard."""
 import argparse
 import json
 import shutil
@@ -12,7 +12,7 @@ from person_detector import input_size, model_digest, package_name
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", type=Path, default=Path("yolo11s.pt"))
+    parser.add_argument("--model", type=Path, default=Path("yolo26s.pt"))
     parser.add_argument("--imgsz", type=int, default=1280)
     parser.add_argument("--output-dir", type=Path, default=Path(".models"))
     parser.add_argument("--force", action="store_true")
@@ -35,16 +35,22 @@ def main():
         shutil.copy2(args.model, weights)
         model = YOLO(str(weights), task="detect")
         architecture = Path(model.model.yaml.get("yaml_file", "")).name
-        if (not architecture.startswith("yolo11") or model.model.model[-1].nc != 80
+        if (not architecture.startswith(("yolo11", "yolo26")) or model.model.model[-1].nc != 80
                 or model.names.get(0) != "person"):
-            parser.error("This adapter supports YOLO11 COCO person detection only")
+            parser.error("This adapter supports YOLO11/YOLO26 COCO person detection only")
         exported = Path(model.export(format="coreml", imgsz=input_size(args.imgsz),
-                                     half=True, nms=False, dynamic=False, device="cpu"))
+                                     quantize=16, nms=None, dynamic=False, device="cpu"))
+        native = coremltools.models.MLModel(str(exported), skip_model_load=True)
+        output = native.get_spec().description.output
+        expected_shape = (1, 84, 21 * (input_size(args.imgsz) // 32) ** 2)
+        if len(output) != 1 or tuple(output[0].type.multiArrayType.shape) != expected_shape:
+            raise ValueError("Export did not produce the required raw COCO head")
         if destination.exists():
             shutil.rmtree(destination)
         shutil.move(str(exported), destination)
     manifest_path.write_text(json.dumps({
-        "schema_version": 1, "head": "yolo11-coco-raw", "imgsz": input_size(args.imgsz),
+        "schema_version": 2, "head": "yolo-coco-raw", "architecture": architecture,
+        "imgsz": input_size(args.imgsz),
         "source_sha256": model_digest(args.model), "precision": "fp16",
         "ultralytics": ultralytics.__version__, "coremltools": coremltools.__version__,
     }, indent=2) + "\n", encoding="utf-8")

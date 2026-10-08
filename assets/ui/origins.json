@@ -1,0 +1,266 @@
+{
+  "home-gray.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "house",
+    "color": "gray"
+  },
+  "home-blue.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "house",
+    "color": "blue"
+  },
+  "home-white.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "house",
+    "color": "white"
+  },
+  "home-ink.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "house",
+    "color": "ink"
+  },
+  "apps-gray.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "square.grid.2x2",
+    "color": "gray"
+  },
+  "apps-blue.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "square.grid.2x2",
+    "color": "blue"
+  },
+  "apps-white.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "square.grid.2x2",
+    "color": "white"
+  },
+  "apps-ink.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "square.grid.2x2",
+    "color": "ink"
+  },
+  "settings-gray.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "gearshape",
+    "color": "gray"
+  },
+  "settings-blue.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "gearshape",
+    "color": "blue"
+  },
+  "settings-white.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "gearshape",
+    "color": "white"
+  },
+  "settings-ink.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "gearshape",
+    "color": "ink"
+  },
+  "keyboard-gray.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "keyboard",
+    "color": "gray"
+  },
+  "keyboard-blue.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "keyboard",
+    "color": "blue"
+  },
+  "keyboard-white.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "keyboard",
+    "color": "white"
+  },
+  "keyboard-ink.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "keyboard",
+    "color": "ink"
+  },
+  "camera-gray.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "camera.fill",
+    "color": "gray"
+  },
+  "camera-blue.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "camera.fill",
+    "color": "blue"
+  },
+  "camera-white.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "camera.fill",
+    "color": "white"
+  },
+  "camera-ink.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "camera.fill",
+    "color": "ink"
+  },
+  "shield-gray.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "checkmark.shield.fill",
+    "color": "gray"
+  },
+  "shield-blue.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "checkmark.shield.fill",
+    "color": "blue"
+  },
+  "shield-white.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "checkmark.shield.fill",
+    "color": "white"
+  },
+  "shield-ink.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "checkmark.shield.fill",
+    "color": "ink"
+  },
+  "plus-gray.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "plus",
+    "color": "gray"
+  },
+  "plus-blue.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "plus",
+    "color": "blue"
+  },
+  "plus-white.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "plus",
+    "color": "white"
+  },
+  "plus-ink.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "plus",
+    "color": "ink"
+  },
+  "chevron-gray.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "chevron.right",
+    "color": "gray"
+  },
+  "chevron-blue.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "chevron.right",
+    "color": "blue"
+  },
+  "chevron-white.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "chevron.right",
+    "color": "white"
+  },
+  "chevron-ink.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "chevron.right",
+    "color": "ink"
+  },
+  "play-gray.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "play.fill",
+    "color": "gray"
+  },
+  "play-blue.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "play.fill",
+    "color": "blue"
+  },
+  "play-white.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "play.fill",
+    "color": "white"
+  },
+  "play-ink.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "play.fill",
+    "color": "ink"
+  },
+  "chip-gray.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "cpu",
+    "color": "gray"
+  },
+  "chip-blue.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "cpu",
+    "color": "blue"
+  },
+  "chip-white.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "cpu",
+    "color": "white"
+  },
+  "chip-ink.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "cpu",
+    "color": "ink"
+  },
+  "check-gray.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "checkmark",
+    "color": "gray"
+  },
+  "check-blue.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "checkmark",
+    "color": "blue"
+  },
+  "check-white.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "checkmark",
+    "color": "white"
+  },
+  "check-ink.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "checkmark",
+    "color": "ink"
+  },
+  "minus-gray.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "minus",
+    "color": "gray"
+  },
+  "minus-blue.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "minus",
+    "color": "blue"
+  },
+  "minus-white.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "minus",
+    "color": "white"
+  },
+  "minus-ink.png": {
+    "source": "Apple SF Symbols via NSImage",
+    "symbol": "minus",
+    "color": "ink"
+  },
+  "app-0.png": {
+    "source": "/System/Volumes/Preboot/Cryptexes/App/System/Applications/Safari.app",
+    "application": "Safari"
+  },
+  "app-1.png": {
+    "source": "/System/Applications/iPhone Mirroring.app",
+    "application": "iPhone Mirroring"
+  },
+  "app-2.png": {
+    "source": "/Applications/WeChat.app",
+    "application": "WeChat"
+  },
+  "app-3.png": {
+    "source": "/Applications/Telegram.app",
+    "application": "Telegram"
+  },
+  "app-4.png": {
+    "source": "/Applications/QQMusic.app",
+    "application": "QQ Music"
+  },
+  "app-5.png": {
+    "source": "/System/Applications/Photos.app",
+    "application": "Photos"
+  }
+}

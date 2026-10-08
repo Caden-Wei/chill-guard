@@ -1,7 +1,7 @@
 """Local person detection with a Core ML adapter and a PyTorch fallback.
 
 Both adapters return original-frame xyxy boxes. Core ML packages must come
-from tools/export_coreml.py: fixed square input, raw YOLO11 COCO detection
+from tools/export_coreml.py: fixed square input, raw YOLO COCO detection
 head, RGB image input. Unsupported exports fail visibly instead of guessing.
 """
 import hashlib
@@ -81,6 +81,10 @@ class _PyTorchDetector:
 
         self.device = "mps" if torch.backends.mps.is_available() else "cpu"
         self.model = YOLO(str(model_path), task="detect")
+        # Use the same one-to-many COCO head and NMS contract as our native export.
+        # YOLO26 otherwise defaults to the different end-to-end detection branch.
+        if hasattr(self.model.model, "end2end"):
+            self.model.model.end2end = False
         self.description = f"PyTorch / {self.device.upper()}"
 
     def detect(self, frame, confidence, imgsz):
@@ -100,7 +104,9 @@ class _CoreMLDetector:
         import coremltools as ct
 
         manifest = json.loads(Path(str(package) + ".json").read_text(encoding="utf-8"))
-        if (manifest.get("schema_version") != 1 or manifest.get("head") != "yolo11-coco-raw"
+        supported_head = ((manifest.get("schema_version"), manifest.get("head")) in
+                          ((1, "yolo11-coco-raw"), (2, "yolo-coco-raw")))
+        if (not supported_head
                 or manifest.get("imgsz") != input_size(imgsz)
                 or manifest.get("source_sha256") != model_digest(source_model)):
             raise ValueError("Core ML export does not match the selected weights, head, or detection size")
@@ -115,6 +121,8 @@ class _CoreMLDetector:
                 or inputs[0].type.imageType.colorSpace != ct.proto.FeatureTypes_pb2.ImageFeatureType.RGB
                 or len(outputs) != 1):
             raise ValueError("Unsupported Core ML input/output contract")
+        if tuple(outputs[0].type.multiArrayType.shape) != (1, 84, 21 * (self.size // 32) ** 2):
+            raise ValueError("Unsupported Core ML detection head; expected raw COCO output")
         self.input_name, self.output_name = inputs[0].name, outputs[0].name
         self.description = f"Core ML / CPU + Neural Engine / {self.size}"
 
