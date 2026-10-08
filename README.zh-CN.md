@@ -28,11 +28,16 @@ Chill Guard 是一个给上班摸鱼用的 macOS 小工具。它会看本地摄�
 
 ## 工作原理
 
-应用使用 YOLO 人体检测模型，只检测 `person` 这一类目标。随后用启发式规则选出“主用户”框，并统计画面里剩余人数。当 `visible_people > max_allowed_people` 时，Chill Guard 会播放提醒，并尝试隐藏你配置的应用。
+应用使用 YOLO 人体检测模型，只检测 `person` 这一类目标。先去掉重复框，再选取主用户；其余目标经过自身排除、缓冲区和最小面积规则筛选。界面人数与触发判断使用同一组有效目标，人数包括当前可见的主用户。超过人数上限并达到配置的连续帧数时，Chill Guard 会播放提醒，并尝试隐藏指定应用。
+
+默认仍使用 PyTorch 推理。可选的 Core ML 后端在本地运行导出的 YOLO11 模型，允许 CPU 和 Neural Engine 执行，具体分配由系统决定。配置与验证方法见 [Apple 本地推理说明](docs/APPLE_INFERENCE.md)。
 
 ## 仓库结构
 
 - `chill_guard_app.py`：主程序
+- `person_detector.py`：Core ML/PyTorch 本地推理与原生后端失败回退
+- `tools/export_coreml.py`：准备固定尺寸的 YOLO11 FP16 Core ML 模型
+- `tools/benchmark_inference.py`：用本地图片对比推理，不调用摄像头
 - `Chill Guard.spec`：macOS 打包用的 PyInstaller 配置
 - `packaging/build_macos_release.sh`：macOS 发布脚本
 - `docs/INSTALL.md`：英文安装指南
@@ -100,6 +105,7 @@ Chill Guard 需要：
 
 ```bash
 python -m py_compile chill_guard_app.py
+python -m unittest discover -s tests -v
 ```
 
 - 涉及用户可见行为改动时，同时更新 `docs/INSTALL.md` 和 `docs/INSTALL.zh-CN.md`

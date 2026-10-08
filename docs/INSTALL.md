@@ -53,6 +53,15 @@ Confirm the enabled item is the exact `Chill Guard.app` you are running.
 - `Alert Sound`: plays a local warning sound when risk is triggered
 - `Apps to Hide`: list of apps to switch or hide after risk is detected
 
+## Inference Backend
+
+In Detection, `Inference` offers `pytorch` (default), `coreml`, and `auto`.
+Core ML requires a matching prepared export and a runtime dependency, both included when the builder follows [Apple inference setup](APPLE_INFERENCE.md). `auto` prefers that export; otherwise it uses PyTorch. `coreml` also falls back to PyTorch if the export is missing or fails, and the status/log reports the reason and actual backend. Changing Model File, Inference, or Detect Size while monitoring reloads the detector.
+
+Keep Model File set to the source `.pt` file, such as `yolo11s.pt`. The native export is selected by model checksum and detection size. With a 640 export, long-range boost requests 1280 and falls back to PyTorch; prepare the default 1280 export to use Core ML for both passes.
+
+Settings, including trigger frames, model choice, and inference backend, are preserved on restart. Hold to Mute suppresses both sound and hiding while detection continues. Preview keeps the complete camera frame with padding, so people at the edges remain visible.
+
 ## Common Issues
 
 ### 1. Global hotkeys do not respond

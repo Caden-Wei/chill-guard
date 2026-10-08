@@ -22,6 +22,11 @@ launch.log
 # Local dev environment
 .venv/
 .matplotlib/
+.models/
+.ultralytics/
+*.mlpackage/
+*.mlpackage.json
+validation/local/
 
 # Editors
 .idea/

@@ -1,0 +1,4 @@
+-r requirements.txt
+# The pinned Ultralytics Core ML converter requires NumPy <= 2.3.5.
+numpy==2.3.5
+coremltools==9.0

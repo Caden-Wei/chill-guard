@@ -28,11 +28,16 @@ Current status:
 
 ## How it works
 
-The app uses a YOLO person-detection model to detect `person` boxes only. A heuristic then picks the main user box and counts everyone else in frame. If `visible_people > max_allowed_people`, Chill Guard plays an alert and tries to hide the apps in your list.
+The app uses a YOLO person-detection model to detect `person` boxes only. Duplicates are removed before choosing the main user. The remaining targets pass the self, buffer, and minimum-area rules. The live count and alert decision use this same set of eligible people, including the visible main user. When the count exceeds `max_allowed_people` for the configured number of consecutive frames, Chill Guard plays an alert and tries to hide the apps in your list.
+
+PyTorch is the default inference backend. An optional Core ML backend runs an exported YOLO11 model locally with CPU and Neural Engine enabled; the system chooses the actual hardware placement. See [Apple inference setup and validation](docs/APPLE_INFERENCE.md).
 
 ## Repository layout
 
 - `chill_guard_app.py`: main application
+- `person_detector.py`: local Core ML/PyTorch inference and native failure recovery
+- `tools/export_coreml.py`: prepare a fixed-size FP16 YOLO11 Core ML model
+- `tools/benchmark_inference.py`: compare inference on local images without camera access
 - `Chill Guard.spec`: PyInstaller spec for macOS packaging
 - `packaging/build_macos_release.sh`: release build script
 - `docs/INSTALL.md`: end-user macOS install guide
@@ -100,6 +105,7 @@ See:
 
 ```bash
 python -m py_compile chill_guard_app.py
+python -m unittest discover -s tests -v
 ```
 
 - For user-facing behavior changes, update `docs/INSTALL.md` and `docs/INSTALL.zh-CN.md`

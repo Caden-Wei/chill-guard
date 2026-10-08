@@ -1,11 +1,18 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from pathlib import Path
+
+model_data = [('yolo11s.pt', '.'), ('yolo11n.pt', '.')]
+for package in Path('.models').glob('*.mlpackage'):
+    manifest = Path(str(package) + '.json')
+    if manifest.is_file():
+        model_data.extend([(str(package), '.models/' + package.name), (str(manifest), '.models')])
 
 a = Analysis(
     ['chill_guard_app.py'],
     pathex=[],
     binaries=[],
-    datas=[('yolo11s.pt', '.')],
+    datas=model_data,
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

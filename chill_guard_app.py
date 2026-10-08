@@ -1,6 +1,5 @@
 import ctypes
 from ctypes.util import find_library
-import platform
 import json
 import os
 import queue
@@ -32,14 +31,9 @@ from AppKit import (
 )
 from ApplicationServices import AXIsProcessTrusted, AXIsProcessTrustedWithOptions, kAXTrustedCheckOptionPrompt
 from PIL import Image, ImageOps, ImageTk
-from ultralytics import YOLO
+from person_detector import create_detector
 import objc
 import Quartz
-
-try:
-    import torch
-except ImportError:  # pragma: no cover - optional fallback
-    torch = None
 
 
 def four_char_code(text):
@@ -122,6 +116,7 @@ except Exception:
 
 DEFAULT_BLACKLIST = ["Safari", "steam_osx", "iPhone Mirroring", "WeChat"]
 APP_VERSION = "1.0.0"
+SETTINGS_SCHEMA_VERSION = 1
 DEFAULT_START_STOP_HOTKEY = "<cmd>+<ctrl>+<alt>+-"
 DEFAULT_MUTE_HOLD_HOTKEY = "<cmd>+<ctrl>+<alt>+="
 MAC_KEYCODE_MAP = {
@@ -284,33 +279,10 @@ def sanitize_blacklist_apps(apps):
 
 
 def migrate_legacy_settings(settings):
+    # Unversioned 1.0 files contain real user choices. Only normalize the
+    # obsolete zero-person limit; do not infer migrations from valid values.
     if settings.max_allowed_people == 0:
         settings.max_allowed_people = 1
-    if settings.frame_scale in (0.5, 0.75):
-        settings.frame_scale = 1.0
-    if settings.confidence_threshold in (0.5, 0.35):
-        settings.confidence_threshold = 0.30
-    if settings.detect_imgsz in (960, 640):
-        settings.detect_imgsz = 1280
-    if not hasattr(settings, "camera_width") or settings.camera_width in (0, 1280):
-        settings.camera_width = 1920
-    if not hasattr(settings, "camera_height") or settings.camera_height in (0, 720):
-        settings.camera_height = 1080
-    if settings.min_risk_box_area_ratio in (0.01, 0.003):
-        settings.min_risk_box_area_ratio = 0.002
-    settings.trigger_frame_threshold = 1
-    settings.far_target_boost_enabled = False
-    settings.far_target_confidence = min(settings.far_target_confidence, 0.18)
-    if settings.start_stop_hotkey == "<cmd>+<shift>+s":
-        settings.start_stop_hotkey = DEFAULT_START_STOP_HOTKEY
-    if settings.mute_hold_hotkey == "<cmd>+<shift>+m":
-        settings.mute_hold_hotkey = DEFAULT_MUTE_HOLD_HOTKEY
-    if settings.start_stop_hotkey == "<cmd>+<ctrl>+<alt>+9":
-        settings.start_stop_hotkey = DEFAULT_START_STOP_HOTKEY
-    if settings.mute_hold_hotkey == "<cmd>+<ctrl>+<alt>+0":
-        settings.mute_hold_hotkey = DEFAULT_MUTE_HOLD_HOTKEY
-    if settings.model_name == "yolo11n.pt":
-        settings.model_name = "yolo11s.pt"
     settings.blacklist_apps = sanitize_blacklist_apps(settings.blacklist_apps)
     return settings
 
@@ -331,6 +303,7 @@ def accessibility_target_path():
 
 def settings_to_dict(settings):
     return {
+        "schema_version": SETTINGS_SCHEMA_VERSION,
         "max_allowed_people": settings.max_allowed_people,
         "cooldown_seconds": settings.cooldown_seconds,
         "camera_index": settings.camera_index,
@@ -352,6 +325,7 @@ def settings_to_dict(settings):
         "alert_sound_enabled": settings.alert_sound_enabled,
         "blacklist_apps": sanitize_blacklist_apps(settings.blacklist_apps),
         "model_name": settings.model_name,
+        "inference_backend": settings.inference_backend,
         "start_stop_hotkey": settings.start_stop_hotkey,
         "mute_hold_hotkey": settings.mute_hold_hotkey,
         "launch_at_login": settings.launch_at_login,
@@ -360,10 +334,12 @@ def settings_to_dict(settings):
 
 def save_settings(settings):
     try:
-        SETTINGS_PATH.write_text(
+        pending_path = SETTINGS_PATH.with_suffix(".tmp")
+        pending_path.write_text(
             json.dumps(settings_to_dict(settings), ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+        pending_path.replace(SETTINGS_PATH)
     except OSError as exc:
         append_log(f"Failed to save settings: {exc}")
 
@@ -379,11 +355,27 @@ def load_settings():
         append_log(f"Failed to load settings: {exc}")
         return defaults
 
+    if not isinstance(payload, dict):
+        append_log("Invalid settings object; using defaults")
+        return defaults
     settings = GuardSettings()
     for field_name in settings.__dataclass_fields__:
         if field_name in payload:
-            setattr(settings, field_name, payload[field_name])
-    return migrate_legacy_settings(settings)
+            value, default = payload[field_name], getattr(defaults, field_name)
+            valid = type(value) is type(default)
+            if isinstance(default, float):
+                valid = type(value) in (int, float)
+            if isinstance(default, list):
+                valid = isinstance(value, list) and all(isinstance(item, str) for item in value)
+            if valid:
+                setattr(settings, field_name, value)
+            else:
+                append_log(f"Invalid setting type for {field_name}; using default")
+    if settings.inference_backend not in ("auto", "coreml", "pytorch"):
+        settings.inference_backend = defaults.inference_backend
+    if payload.get("schema_version", 0) == 0:
+        settings = migrate_legacy_settings(settings)
+    return settings
 
 
 @dataclass
@@ -409,6 +401,7 @@ class GuardSettings:
     alert_sound_enabled: bool = True
     blacklist_apps: list[str] = field(default_factory=lambda: DEFAULT_BLACKLIST.copy())
     model_name: str = "yolo11s.pt"
+    inference_backend: str = "pytorch"
     start_stop_hotkey: str = DEFAULT_START_STOP_HOTKEY
     mute_hold_hotkey: str = DEFAULT_MUTE_HOLD_HOTKEY
     launch_at_login: bool = False
@@ -462,6 +455,7 @@ class GuardRuntime:
                 alert_sound_enabled=self.settings.alert_sound_enabled,
                 blacklist_apps=self.settings.blacklist_apps.copy(),
                 model_name=self.settings.model_name,
+                inference_backend=self.settings.inference_backend,
                 start_stop_hotkey=self.settings.start_stop_hotkey,
                 mute_hold_hotkey=self.settings.mute_hold_hotkey,
                 launch_at_login=self.settings.launch_at_login,
@@ -536,10 +530,6 @@ def clamp(value, lower, upper):
     return max(lower, min(value, upper))
 
 
-def tensor_to_float(value):
-    return float(value.item()) if hasattr(value, "item") else float(value)
-
-
 def box_area(box):
     x1, y1, x2, y2 = box
     return max(0.0, x2 - x1) * max(0.0, y2 - y1)
@@ -599,19 +589,6 @@ def intersection_area(box_a, box_b):
     inter_x2 = min(ax2, bx2)
     inter_y2 = min(ay2, by2)
     return box_area((inter_x1, inter_y1, inter_x2, inter_y2))
-
-
-def extract_person_detections(result):
-    detections = []
-    boxes = result.boxes
-    if boxes is None or boxes.xyxy is None:
-        return detections
-
-    for xyxy, confidence in zip(boxes.xyxy, boxes.conf):
-        x1, y1, x2, y2 = [tensor_to_float(value) for value in xyxy]
-        detections.append({"box": (x1, y1, x2, y2), "confidence": tensor_to_float(confidence)})
-
-    return detections
 
 
 def select_self_candidate(detections, previous_self_box, frame_width, frame_height, settings):
@@ -752,24 +729,6 @@ def filter_risk_detections(detections, self_core_box, self_buffer_box, self_box,
     return risk_detections
 
 
-def count_effective_people(detections, self_box, self_core_box=None):
-    if not detections:
-        return 0
-
-    if self_box is None:
-        return len(dedupe_detections(detections))
-
-    others = []
-    for detection in detections:
-        if is_self_fragment_detection(detection, self_box):
-            continue
-        if is_same_person_as_self(detection, self_box, self_core_box):
-            continue
-        others.append(detection)
-
-    return 1 + len(dedupe_detections(others))
-
-
 def dedupe_detections(detections, iou_threshold=0.45):
     merged = []
     for detection in sorted(detections, key=lambda item: item["confidence"], reverse=True):
@@ -795,16 +754,6 @@ def remap_detection_boxes(detections, scale_x=1.0, scale_y=1.0, offset_x=0.0, of
             }
         )
     return remapped
-
-
-def resolve_device():
-    if platform.machine() == "arm64" and torch is not None:
-        try:
-            if torch.backends.mps.is_available():
-                return "mps"
-        except Exception:
-            pass
-    return "cpu"
 
 
 def emergency_switch(blacklist_apps):
@@ -990,21 +939,40 @@ def monitor_loop(runtime, status_callback):
 
     try:
         status_callback("Loading model...")
-        model = YOLO(resolve_model_path(settings.model_name))
-        device_type = resolve_device()
-        status_callback(f"Monitoring: {device_type.upper()} / camera {settings.camera_index}")
+        def load_detector(current_settings):
+            detector = create_detector(
+                resolve_model_path(current_settings.model_name),
+                backend=current_settings.inference_backend,
+                imgsz=current_settings.detect_imgsz,
+                model_dirs=(RESOURCE_DIR / ".models", RESOURCE_DIR / "models", APP_SUPPORT_DIR / "models"),
+            )
+            if detector.notice:
+                append_log(detector.notice)
+            status_callback(f"Monitoring: {detector.description} / camera {current_settings.camera_index}"
+                            + (f". {detector.notice}" if detector.notice else ""))
+            return detector
+
+        model = load_detector(settings)
+        model_config = (settings.model_name, settings.inference_backend, settings.detect_imgsz)
 
         cap = cv2.VideoCapture(settings.camera_index, cv2.CAP_AVFOUNDATION)
         if not cap.isOpened():
             raise RuntimeError("Cannot open the camera. Check permissions, the selected index, or whether another app is using it.")
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, settings.camera_width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, settings.camera_height)
-        status_callback("Camera connected")
+        status_callback(f"Monitoring: {model.description} / camera {settings.camera_index} connected"
+                        + (f". {model.notice}" if model.notice else ""))
 
         consecutive_count = 0
 
         while not runtime.stop_event.is_set():
             settings = runtime.get_settings()
+            updated_config = (settings.model_name, settings.inference_backend, settings.detect_imgsz)
+            if updated_config != model_config:
+                model = load_detector(settings)
+                model_config = updated_config
+                consecutive_count = 0
+                runtime.cached_far_detections = []
             runtime.frame_counter += 1
             try:
                 ret, frame = cap.read()
@@ -1016,16 +984,8 @@ def monitor_loop(runtime, status_callback):
             frame = cv2.flip(frame, 1)
             small_frame = cv2.resize(frame, (0, 0), fx=settings.frame_scale, fy=settings.frame_scale)
 
-            results = model.predict(
-                source=small_frame,
-                classes=[0],
-                conf=settings.confidence_threshold,
-                imgsz=settings.detect_imgsz,
-                verbose=False,
-                device=device_type,
-            )
-
-            detections = extract_person_detections(results[0])
+            previous_backend = model.description
+            detections = model.detect(small_frame, settings.confidence_threshold, settings.detect_imgsz)
 
             if settings.far_target_boost_enabled and runtime.frame_counter % 4 == 0:
                 frame_height_full, frame_width_full = frame.shape[:2]
@@ -1036,15 +996,9 @@ def monitor_loop(runtime, status_callback):
 
                 if roi_x2 > roi_x1 and roi_y2 > roi_y1:
                     far_roi = frame[roi_y1:roi_y2, roi_x1:roi_x2]
-                    far_results = model.predict(
-                        source=far_roi,
-                        classes=[0],
-                        conf=min(settings.confidence_threshold, settings.far_target_confidence),
-                        imgsz=max(settings.detect_imgsz, 1280),
-                        verbose=False,
-                        device=device_type,
-                    )
-                    far_detections = extract_person_detections(far_results[0])
+                    far_detections = model.detect(
+                        far_roi, min(settings.confidence_threshold, settings.far_target_confidence),
+                        max(settings.detect_imgsz, 1280))
                     remapped_far = remap_detection_boxes(
                         far_detections,
                         scale_x=settings.frame_scale,
@@ -1054,7 +1008,15 @@ def monitor_loop(runtime, status_callback):
                     )
                     runtime.cached_far_detections = remapped_far
             if settings.far_target_boost_enabled and runtime.cached_far_detections:
-                detections = dedupe_detections(detections + runtime.cached_far_detections)
+                detections += runtime.cached_far_detections
+            elif not settings.far_target_boost_enabled:
+                runtime.cached_far_detections = []
+            if model.description != previous_backend:
+                append_log(model.notice or model.description)
+                status_callback(f"Monitoring: {model.description}. {model.notice or ''}")
+            # Remove lower-confidence duplicates before they can win the self
+            # candidate score and suppress a separate, valid person.
+            detections = dedupe_detections(detections)
 
             frame_height, frame_width = small_frame.shape[:2]
 
@@ -1092,11 +1054,15 @@ def monitor_loop(runtime, status_callback):
                 frame_height,
                 settings,
             )
+            risk_detections = dedupe_detections(risk_detections)
 
             current_time = time.time()
             cooldown_left = max(0.0, settings.cooldown_seconds - (current_time - runtime.last_trigger_time))
 
-            total_people = count_effective_people(detections, runtime.self_box, self_core_box)
+            # Preview, live count, and alerts share exactly the same eligible targets.
+            self_present = any(is_same_person_as_self(item, runtime.self_box, self_core_box)
+                               for item in detections) if runtime.self_box is not None else False
+            total_people = int(self_present) + len(risk_detections)
             runtime.set_live_people_count(total_people)
             over_people_limit = total_people > settings.max_allowed_people
             # Respect the configured people limit. Risk boxes are still shown in preview/status,
@@ -1412,6 +1378,12 @@ class ChillGuardApp:
         ttk.Label(model_row, text="Model File", style="FieldHeader.TLabel").pack(side="left")
         self.model_var = tk.StringVar(value="yolo11n.pt")
         ttk.Entry(model_row, textvariable=self.model_var, width=22).pack(side="left", padx=(10, 0))
+        backend_row = ttk.Frame(self.monitor_basic_frame, style="InsetPanel.TFrame")
+        backend_row.pack(fill="x", pady=(8, 0))
+        ttk.Label(backend_row, text="Inference", style="FieldHeader.TLabel").pack(side="left")
+        self.backend_var = tk.StringVar(value=self.default_settings.inference_backend)
+        ttk.Combobox(backend_row, textvariable=self.backend_var, values=("auto", "coreml", "pytorch"),
+                     state="readonly", width=12).pack(side="left", padx=(10, 0))
 
         basic_form_wrap = ttk.Frame(self.monitor_basic_frame, style="FormBlock.TFrame", padding=14)
         basic_form_wrap.pack(fill="x", pady=(10, 0))
@@ -1932,18 +1904,18 @@ class ChillGuardApp:
             limit_text = self.entries["max_allowed_people"].get().strip() or "1"
             self.preview_chip_limit_var.set(f"Allowed {limit_text}")
 
-        if "Alert" in text:
-            self.preview_chip_state_var.set("Alerting")
-            self.status_pill_var.set("Alert")
-        elif "Monitoring:" in text or "Starting monitoring" in text:
-            self.preview_chip_state_var.set("Monitoring")
-            self.status_pill_var.set("Running")
-        elif "Muted" in text or "mute" in text.lower():
-            self.preview_chip_state_var.set("Muted")
-            self.status_pill_var.set("Muted")
-        elif "failed" in text.lower():
+        if text.startswith("Monitoring stopped:") or ("failed" in text.lower() and "Using PyTorch" not in text):
             self.preview_chip_state_var.set("Error")
             self.status_pill_var.set("Error")
+        elif self.runtime.is_muted_until_release():
+            self.preview_chip_state_var.set("Muted")
+            self.status_pill_var.set("Muted")
+        elif text.startswith(("Alert triggered", "Alert already in progress")):
+            self.preview_chip_state_var.set("Alerting")
+            self.status_pill_var.set("Alert")
+        elif self.runtime.running:
+            self.preview_chip_state_var.set("Monitoring")
+            self.status_pill_var.set("Running")
         else:
             self.preview_chip_state_var.set("Standby")
             self.status_pill_var.set("Standby")
@@ -2122,6 +2094,7 @@ class ChillGuardApp:
                     if line.strip()
                 ],
                 model_name=self.model_var.get().strip() or "yolo11n.pt",
+                inference_backend=self.backend_var.get(),
                 start_stop_hotkey=self.normalize_hotkey(self.start_stop_hotkey_var.get().strip()) or GuardSettings().start_stop_hotkey,
                 mute_hold_hotkey=self.normalize_hotkey(self.mute_hold_hotkey_var.get().strip()) or GuardSettings().mute_hold_hotkey,
                 launch_at_login=self.launch_at_login_var.get(),
@@ -2141,6 +2114,10 @@ class ChillGuardApp:
             raise ValueError("Trigger frames must be at least 1.")
         if settings.camera_index < 0:
             raise ValueError("Camera index cannot be negative.")
+        if settings.max_allowed_people < 1:
+            raise ValueError("Allowed people must be at least 1, including the main user.")
+        if settings.inference_backend not in ("auto", "coreml", "pytorch"):
+            raise ValueError("Choose auto, coreml, or pytorch inference.")
         if not settings.blacklist_apps:
             raise ValueError("Blacklist cannot be empty. Keep at least one app name.")
         if not settings.start_stop_hotkey:
@@ -2935,8 +2912,8 @@ class ChillGuardApp:
             if max_height <= 0:
                 max_height = 320
             target_size = (max(1, int(max_width)), max(1, int(max_height)))
-            # Fill the preview region without geometric distortion.
-            image = ImageOps.fit(image, target_size, method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
+            # Keep edge entrants visible; pad instead of cropping the camera feed.
+            image = ImageOps.pad(image, target_size, method=Image.Resampling.LANCZOS, color="#edf2f7")
             self.preview_image = ImageTk.PhotoImage(image=image)
             self.preview_label.configure(image=self.preview_image, text="", style="PreviewImage.TLabel")
 
@@ -2970,6 +2947,7 @@ class ChillGuardApp:
         self.alert_sound_var.set(defaults.alert_sound_enabled)
         self.far_target_boost_var.set(defaults.far_target_boost_enabled)
         self.model_var.set(defaults.model_name)
+        self.backend_var.set(defaults.inference_backend)
         self.start_stop_hotkey_var.set(self.format_hotkey_display(defaults.start_stop_hotkey))
         self.mute_hold_hotkey_var.set(self.format_hotkey_display(defaults.mute_hold_hotkey))
         self.launch_at_login_var.set(defaults.launch_at_login)
@@ -3008,6 +2986,7 @@ class ChillGuardApp:
         self.alert_sound_var.set(settings.alert_sound_enabled)
         self.far_target_boost_var.set(settings.far_target_boost_enabled)
         self.model_var.set(settings.model_name)
+        self.backend_var.set(settings.inference_backend)
         self.start_stop_hotkey_var.set(self.format_hotkey_display(settings.start_stop_hotkey))
         self.mute_hold_hotkey_var.set(self.format_hotkey_display(settings.mute_hold_hotkey))
         self.launch_at_login_var.set(settings.launch_at_login)
@@ -3029,6 +3008,27 @@ class ChillGuardApp:
 
 
 def main():
+    # Offline diagnostic also exercises the frozen app's native libraries.
+    # It creates no window, hotkey listener, camera capture, or app-hide worker.
+    if len(sys.argv) > 1 and sys.argv[1] == "--check-inference":
+        import argparse
+        parser = argparse.ArgumentParser(description="Check local inference using an image; no camera or app actions")
+        parser.add_argument("image", type=Path)
+        parser.add_argument("--backend", choices=("auto", "coreml", "pytorch"), default="auto")
+        parser.add_argument("--model", default="yolo11s.pt")
+        parser.add_argument("--imgsz", type=int, default=1280)
+        parser.add_argument("--report", type=Path, required=True)
+        args = parser.parse_args(sys.argv[2:])
+        frame = cv2.imread(str(args.image))
+        if frame is None:
+            parser.error("Image is not readable")
+        detector = create_detector(resolve_model_path(args.model), args.backend, args.imgsz,
+                                   (RESOURCE_DIR / ".models", RESOURCE_DIR / "models", APP_SUPPORT_DIR / "models"))
+        detections = detector.detect(frame, 0.30, args.imgsz)
+        args.report.parent.mkdir(parents=True, exist_ok=True)
+        args.report.write_text(json.dumps({"backend": detector.description, "notice": detector.notice,
+                                          "detections": detections}, indent=2) + "\n", encoding="utf-8")
+        return
     append_log("Application starting")
     try:
         root = tk.Tk()
