@@ -20,8 +20,8 @@ colors:
   shortcut: '#F0F3F7'
   switch-off: '#D0D7E2'
   switch-thumb-hover: '#DCE6F5'
-  menu-button: '#E8EDF5'
-  menu-button-hover: '#DCE5F2'
+  menu-button: '#F2F5F9'
+  menu-button-hover: '#E4EBF4'
   menu-item-hover: '#E4EEFF'
   scrollbar: '#D5DDE8'
   scrollbar-hover: '#AEBBCB'
@@ -244,7 +244,7 @@ The palette is cool, pale, and deliberately quiet. The frontmatter is the normat
 - **Hairline** (`line`) defines panels and fields without heavy outlines.
 - **Quiet Control** (`secondary`, `secondary-hover`) gives secondary actions a soft fill and hover response.
 - `language-track`, `status-surface`, `app-row`, `readonly`, and `shortcut` are subtle surface variants for their named controls, not extra accents.
-- `menu-button`, `menu-button-hover`, and `menu-item-hover` distinguish the option-menu arrow and menu choice hover. `switch-off` and `switch-thumb-hover` describe switch affordances. `scrollbar` and `scrollbar-hover` keep intentional scrolling visible.
+- Option menus use a unified `menu-button` surface and an 8 × 4 point gray chevron with a 1.4 point stroke. `menu-button-hover` and `menu-item-hover` distinguish arrow and menu choice hover. `switch-off` and `switch-thumb-hover` describe switch affordances. `scrollbar` and `scrollbar-hover` keep intentional scrolling visible.
 
 ### Semantic states
 

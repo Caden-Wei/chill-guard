@@ -118,7 +118,7 @@ except Exception:
 
 
 DEFAULT_BLACKLIST = ["Safari", "steam_osx", "iPhone Mirroring", "WeChat"]
-APP_VERSION = "1.2.2"
+APP_VERSION = "1.2.3"
 SETTINGS_SCHEMA_VERSION = 2
 DEFAULT_START_STOP_HOTKEY = "<cmd>+<ctrl>+<alt>+-"
 DEFAULT_MUTE_HOLD_HOTKEY = "<cmd>+<ctrl>+<alt>+="

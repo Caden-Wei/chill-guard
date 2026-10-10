@@ -81,6 +81,93 @@ class WorkspaceTests(unittest.TestCase):
         self.root.update()
         self.assertEqual(self.view.parameters_toggle_button.cget("text"), "高级设置")
 
+    def test_precise_touchpad_events_scroll_settings_over_child_controls(self):
+        if not self.root.tk.call("info", "commands", "::tk::PreciseScrollDeltas"):
+            self.skipTest("Tk does not emit TouchpadScroll events")
+        self.root.geometry("1000x690")
+        self.view.switch_settings_panel("parameters")
+        self.root.update()
+        canvas = self.view.ui.scroll_pages["basic"]
+        hidden = self.view.ui.scroll_pages["advanced"]
+        body = canvas.nametowidget(canvas.itemcget(canvas.find_all()[0], "window"))
+        targets = (body, self.view.ui.model_picker._text_label,
+                   self.view.entries["max_allowed_people"]._entry, body._scrollbar._canvas)
+        for target in targets:
+            with self.subTest(widget=target.winfo_class()):
+                canvas.yview_moveto(0)
+                hidden_before = hidden.yview()
+                # Tk 9 packs signed x/y pixel deltas in a single 32-bit value.
+                target.event_generate("<TouchpadScroll>", delta=(-4 & 0xffff))
+                self.root.update()
+                self.assertGreater(canvas.yview()[0], 0)
+                self.assertLess(canvas.yview()[0] * canvas.bbox("all")[3], 10)
+                self.assertEqual(hidden.yview(), hidden_before)
+                target.event_generate("<TouchpadScroll>", delta=4)
+                self.root.update()
+                self.assertEqual(canvas.yview()[0], 0)
+        self.view.ui.model_picker._canvas.event_generate("<TouchpadScroll>", delta=(-900 & 0xffff))
+        self.root.update()
+        lower = self.view.entries["detect_imgsz"]
+        self.assertGreaterEqual(lower.winfo_rooty(), canvas.winfo_rooty())
+        self.assertLess(lower.winfo_rooty() + lower.winfo_height(),
+                        canvas.winfo_rooty() + canvas.winfo_height())
+        before = canvas.yview()
+        self.view.ui.model_picker._canvas.event_generate("<TouchpadScroll>", delta=8 << 16)
+        self.root.update()
+        self.assertEqual(canvas.yview(), before)
+
+    def test_toplevel_touchpad_delivery_uses_pointer_and_visible_page(self):
+        if not self.root.tk.call("info", "commands", "::tk::PreciseScrollDeltas"):
+            self.skipTest("Tk does not emit TouchpadScroll events")
+        self.root.geometry("1000x690")
+        self.view.switch_settings_panel("parameters")
+        self.root.update()
+        basic = self.view.ui.scroll_pages["basic"]
+        advanced = self.view.ui.scroll_pages["advanced"]
+        position = (basic.winfo_rootx() + 200, basic.winfo_rooty() + 100)
+        with patch.object(self.root, "winfo_pointerxy", return_value=position):
+            self.root.event_generate("<TouchpadScroll>", delta=(-1 & 0xffff))
+            self.root.update()
+        self.assertGreater(basic.yview()[0], 0)
+        basic_before = basic.yview()
+        self.view.show_monitor_advanced_view()
+        self.root.update()
+        with patch.object(self.root, "winfo_pointerxy", return_value=position):
+            self.root.event_generate("<TouchpadScroll>", delta=(-100 & 0xffff))
+            self.root.update()
+        self.assertGreater(advanced.yview()[0], 0)
+        self.assertEqual(basic.yview(), basic_before)
+        before = advanced.yview()
+        position = (self.root.winfo_rootx() + 70, self.root.winfo_rooty() + 300)
+        with patch.object(self.root, "winfo_pointerxy", return_value=position):
+            self.root.event_generate("<TouchpadScroll>", delta=(-100 & 0xffff))
+            self.root.update()
+        self.assertEqual(advanced.yview(), before)
+
+    def test_refined_model_menus_keep_activation_choices_and_translation(self):
+        self.view.switch_settings_panel("parameters")
+        self.root.update()
+        for picker, variable, code in ((self.view.ui.model_picker, self.view.model_var, "yolo11s.pt"),
+                                       (self.view.ui.backend_picker, self.view.backend_var, "auto")):
+            with self.subTest(picker=picker):
+                with patch.object(picker._dropdown_menu, "open") as opened:
+                    picker._canvas.event_generate("<Button-1>", x=picker.winfo_width() - 16, y=16)
+                    self.root.update()
+                    opened.assert_called_once()
+                    opened.reset_mock()
+                    picker._canvas.focus_force()
+                    picker._canvas.event_generate("<KeyPress-space>")
+                    self.root.update()
+                    opened.assert_called_once()
+                picker._dropdown_menu.invoke(1)
+                self.assertEqual(variable.get(), code)
+        self.view.ui.language_var.set("English")
+        self.view.ui.change_language()
+        self.assertEqual(self.view.ui.model_picker.get(), "YOLO11s (legacy)")
+        self.assertEqual(self.view.ui.backend_picker.get(), "Automatic")
+        self.assertEqual(app.load_settings().model_name, self.settings.model_name)
+        self.assertEqual(app.load_settings().inference_backend, self.settings.inference_backend)
+
     def test_model_loading_has_starting_state_and_preview_returns_to_empty(self):
         import numpy as np
         self.view.runtime.running = True

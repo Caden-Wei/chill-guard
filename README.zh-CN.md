@@ -9,7 +9,7 @@ Chill Guard 是一个给上班摸鱼用的 macOS 小工具。它会看本地摄�
 - 仅支持 `macOS`
 - 本地桌面应用，不是云服务
 - 基于 `tkinter`、`OpenCV`、`PyObjC`、`ultralytics` 和 `PyInstaller`
-- 1.2.2 版的侧栏品牌图标与 App Icon 共用同一张素材，并包含 [相机预览闪烁修复](validation/PREVIEW_FLICKER_2026-10-10.md)。
+- 1.2.3 版修复了 [触摸板滚动并简化下拉箭头](validation/TRACKPAD_SCROLL_2026-10-10.md)，保留现有 App Icon 和 [相机预览闪烁修复](validation/PREVIEW_FLICKER_2026-10-10.md)。
 
 ## 主要功能
 

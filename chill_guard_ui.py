@@ -19,6 +19,58 @@ ENGINE_CODES = ('coreml', 'auto', 'pytorch')
 ENGINE_LABELS = ('Apple Core ML (recommended)', 'Automatic', 'PyTorch compatibility')
 
 
+class WorkspaceScrollFrame(ctk.CTkScrollableFrame):
+    """Handle Tk 9's pixel deltas alongside CTk's legacy mouse-wheel support."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._touchpad_binding = None
+        self._scroll_root = self.winfo_toplevel()
+        if self.tk.call('info', 'commands', '::tk::PreciseScrollDeltas'):
+            self._parent_canvas.configure(yscrollincrement=1)
+            self._touchpad_binding = self._scroll_root.bind('<TouchpadScroll>', self._touchpad_scroll, add='+')
+
+    def _touchpad_scroll(self, event):
+        if not self._parent_canvas.winfo_ismapped():
+            return
+        target = event.widget
+        # Aqua can deliver precise events to the toplevel rather than the child.
+        if target == self._scroll_root:
+            target = self._scroll_root.winfo_containing(*self._scroll_root.winfo_pointerxy())
+        while target is not None and target != self._parent_frame:
+            target = getattr(target, 'master', None)
+        if target is None:
+            return
+        _, delta_y = self.tk.call('::tk::PreciseScrollDeltas', event.delta)
+        if delta_y:
+            self._parent_canvas.yview_scroll(-int(delta_y), 'units')
+            return 'break'
+
+    def destroy(self):
+        if self._touchpad_binding:
+            self._scroll_root.unbind('<TouchpadScroll>', self._touchpad_binding)
+        super().destroy()
+
+
+class WorkspaceOptionMenu(ctk.CTkOptionMenu):
+    """Keep CTk's menu behavior with a small, light chevron."""
+
+    def _draw(self, no_color_updates=False):
+        super()._draw(no_color_updates)
+        self._canvas.itemconfigure('dropdown_arrow', state='hidden')
+        if not self._canvas.find_withtag('workspace_chevron'):
+            self._canvas.create_line(0, 0, 0, 0, 0, 0, tags='workspace_chevron',
+                                     capstyle=tk.ROUND, joinstyle=tk.ROUND)
+        center_x = self._apply_widget_scaling(self._current_width - self._current_height / 2)
+        center_y = self._apply_widget_scaling(self._current_height / 2)
+        half_width, half_height = self._apply_widget_scaling(4), self._apply_widget_scaling(2)
+        self._canvas.coords('workspace_chevron', center_x - half_width, center_y - half_height,
+                            center_x, center_y + half_height, center_x + half_width, center_y - half_height)
+        self._canvas.itemconfigure('workspace_chevron', width=self._apply_widget_scaling(1.4),
+                                   fill=self._apply_appearance_mode(self._text_color_disabled) if self._state == tk.DISABLED else MUTED)
+        self._canvas.tag_raise('workspace_chevron')
+
+
 def setup_theme(app):
     ctk.set_appearance_mode('light')
     ctk.set_default_color_theme('blue')
@@ -309,7 +361,7 @@ class Workspace:
         return entry
 
     def scrollable(self, page, key):
-        body = ctk.CTkScrollableFrame(page, fg_color=WHITE, corner_radius=0,
+        body = WorkspaceScrollFrame(page, fg_color=WHITE, corner_radius=0,
                                      scrollbar_button_color='#D5DDE8', scrollbar_button_hover_color='#AEBBCB')
         body.pack(fill='both', expand=True)
         self.scroll_pages[key] = body._parent_canvas
@@ -395,10 +447,10 @@ class Workspace:
             row = self.frame(models)
             row.pack(fill='x', pady=5)
             self.label(row, title).pack(side='left')
-            picker = ctk.CTkOptionMenu(row, variable=variable, values=[self.t(x) for x in labels],
+            picker = WorkspaceOptionMenu(row, variable=variable, values=[self.t(x) for x in labels],
                                        command=lambda value, c=codes, l=labels, d=destination: d.set(c[[self.t(x) for x in l].index(value)]),
                                        width=247, height=32, corner_radius=7, font=self.font(12),
-                                       fg_color='#F2F5F9', button_color='#E8EDF5', button_hover_color='#DCE5F2',
+                                       fg_color='#F2F5F9', button_color='#F2F5F9', button_hover_color='#E4EBF4',
                                        text_color=INK, dropdown_fg_color=WHITE, dropdown_text_color=INK,
                                        dropdown_hover_color='#E4EEFF', dropdown_font=self.font(12))
             picker.pack(side='right')
