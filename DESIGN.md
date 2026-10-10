@@ -78,7 +78,6 @@ rounded:
   field: 7px
   row: 8px
   button: 9px
-  brand: 11px
   panel: 12px
 spacing:
   compact: 2px
@@ -212,7 +211,7 @@ components:
 
 A quiet, legible macOS camera utility. Pale gray navigation, white working surfaces, a restrained blue action color, and rounded hairline panels make protection state and the next action easy to read. The interface stays compact without hiding the configured applications or mixing advanced geometry into the overview.
 
-This is a native desktop system implemented with CustomTkinter controls and AppKit integration. SF Pro Text, native window chrome, platform symbol assets, and authentic installed application icons adapt the selected image to macOS. The camera symbol is a platform asset, not a newly established logo.
+This is a native desktop system implemented with CustomTkinter controls and AppKit integration. SF Pro Text, native window chrome, platform symbol assets, and authentic installed application icons adapt the selected image to macOS. The upper-left brand uses the existing packaged App Icon at 40 × 40; preview camera symbols remain platform assets.
 
 **Key Characteristics:**
 - Fixed pale navigation rail and flexible white content.
@@ -295,9 +294,9 @@ The app uses flat tonal layering and one-unit hairline borders. There are no aut
 
 ## Shapes
 
-Bordered panels use gently rounded corners (12 source units) with a one-unit hairline. Buttons use a compact curve (9); app rows and the language container use 8; fields and shortcut keycaps use 7; language segments use 6. The camera brand badge uses 11. Flat page and rail wrappers have square corners. Keep radius tied to the component role rather than rounding every nested wrapper.
+Bordered panels use gently rounded corners (12 source units) with a one-unit hairline. Buttons use a compact curve (9); app rows and the language container use 8; fields and shortcut keycaps use 7; language segments use 6. The App Icon retains its own artwork and corners without an extra blue badge. Flat page and rail wrappers have square corners. Keep radius tied to the component role rather than rounding every nested wrapper.
 
-Platform symbols are image assets, not text glyph substitutes for interface icons. The camera mark in the selected image was adapted to an SF camera asset; it is not a binding logo. Native title chrome and authentic installed application icons are intentional macOS adaptations. Modifier glyphs in shortcut keycaps and the dot beside a written status are functional notation.
+Platform symbols are image assets, not text glyph substitutes for interface icons. The upper-left brand shares `assets/app_icon_1024.png` with the packaged macOS App Icon; camera symbols serve preview states. Native title chrome and authentic installed application icons are intentional macOS adaptations. Modifier glyphs in shortcut keycaps and the dot beside a written status are functional notation.
 
 ## Components
 

@@ -9,7 +9,7 @@ Current status:
 - macOS only
 - local desktop app, not a cloud service
 - built with `tkinter`, `OpenCV`, `PyObjC`, `ultralytics`, and `PyInstaller`
-- Version 1.2.1 fixes the flashing loading overlay during camera preview and removes stale images when the preview is hidden. See [preview fix validation](validation/PREVIEW_FLICKER_2026-10-10.md).
+- Version 1.2.2 uses the existing App Icon in the navigation rail and includes the [camera preview flicker fix](validation/PREVIEW_FLICKER_2026-10-10.md).
 
 ## What it does
 

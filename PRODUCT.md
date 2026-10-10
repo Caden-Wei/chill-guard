@@ -24,7 +24,7 @@ Start and stop from the main window, Dock menu, or saved global shortcut. Hold t
 - Camera images stay local. Native inference must expose the actual backend and any fallback.
 - Preserve the user's existing application list, shortcuts, launch-at-login choice, and detection rules during upgrades.
 - The user explicitly delegated implementation and requested a complete local upgrade, including newer detection, a more usable modern interface, and switchable Chinese and English.
-- Publishing and pushing are outside this local upgrade.
+- Publishing and pushing require explicit user authorization.
 
 ## Brand Commitments
 

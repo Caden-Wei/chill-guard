@@ -495,7 +495,7 @@
         ]
       },
       "typeUnits": "Frontmatter px strings preserve positive CustomTkinter font-size numbers. They are not evidence of CSS pixels, rendered screenshot dimensions, or measured font metrics.",
-      "symbols": "Native SF symbol image assets and authentic installed application icon assets. The reference camera-slash drawing is adapted, not a binding logo.",
+      "symbols": "The upper-left brand reuses assets/app_icon_1024.png at 40 × 40. Native SF symbol assets serve interface actions and preview states; authentic installed app icons identify protected applications.",
       "depth": "No authored in-app shadows, gradients, glass, or tween/easing tokens; tonal layers and one-unit borders define depth.",
       "resizeBehavior": "Fixed rail and inspector; flexible camera/content; intentional scrolling in forms. No web or mobile breakpoints."
     },
@@ -700,7 +700,7 @@
   ],
   "narrative": {
     "northStar": "macOS Air",
-    "overview": "A quiet, legible macOS camera utility. Pale gray navigation, white working surfaces, a restrained blue action color, and rounded hairline panels make protection state and the next action easy to read. The interface stays compact without hiding the configured applications or mixing advanced geometry into the overview.\n\nThis is a native desktop system implemented with CustomTkinter controls and AppKit integration. SF Pro Text, native window chrome, platform symbol assets, and authentic installed application icons adapt the selected image to macOS. The camera symbol is a platform asset, not a newly established logo.",
+    "overview": "A quiet, legible macOS camera utility. Pale gray navigation, white working surfaces, a restrained blue action color, and rounded hairline panels make protection state and the next action easy to read. The interface stays compact without hiding the configured applications or mixing advanced geometry into the overview.\n\nThis is a native desktop system implemented with CustomTkinter controls and AppKit integration. SF Pro Text, native window chrome, platform symbol assets, and authentic installed application icons adapt the selected image to macOS. The upper-left brand uses the existing packaged App Icon at 40 × 40; preview camera symbols remain platform assets.",
     "keyCharacteristics": [
       "Fixed pale navigation rail and flexible white content.",
       "One dominant camera area, a compact inspector, and a short shortcut strip on the overview.",
