@@ -118,7 +118,7 @@ except Exception:
 
 
 DEFAULT_BLACKLIST = ["Safari", "steam_osx", "iPhone Mirroring", "WeChat"]
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.2.1"
 SETTINGS_SCHEMA_VERSION = 2
 DEFAULT_START_STOP_HOTKEY = "<cmd>+<ctrl>+<alt>+-"
 DEFAULT_MUTE_HOLD_HOTKEY = "<cmd>+<ctrl>+<alt>+="
@@ -1123,7 +1123,7 @@ def monitor_loop(runtime, status_callback):
                     people_count=total_people,
                 )
                 runtime.set_latest_preview(debug_frame)
-            else:
+            elif not settings.preview_enabled:
                 runtime.set_latest_preview(None)
 
     except Exception as exc:

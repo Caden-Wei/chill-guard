@@ -489,6 +489,10 @@ class Workspace:
         a = self.app
         if frame is None:
             a.preview_label.configure(image=None)
+            # CTkLabel 5.2 leaves its underlying Tk image drawn when image=None.
+            # Unmap the image surface so hidden/stopped previews cannot show it.
+            a.preview_label.grid_remove()
+            self.live_image = None
             self.empty_preview.place(relx=.5, rely=.47, anchor='center')
             return
         import cv2
@@ -498,6 +502,7 @@ class Workspace:
                               method=Image.Resampling.LANCZOS, color=PREVIEW)
         self.live_image = ctk.CTkImage(source, source, size=size)
         a.preview_label.configure(image=self.live_image)
+        a.preview_label.grid()
         self.empty_preview.place_forget()
 
     def set_language(self, code):

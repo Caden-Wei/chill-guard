@@ -64,8 +64,8 @@ app = BUNDLE(
     info_plist={
         'CFBundleDisplayName': 'Chill Guard',
         'CFBundleName': 'Chill Guard',
-        'CFBundleShortVersionString': '1.2.0',
-        'CFBundleVersion': '20261008.3',
+        'CFBundleShortVersionString': '1.2.1',
+        'CFBundleVersion': '20261010.1',
         'NSCameraUsageDescription': 'Chill Guard needs camera access to detect nearby people and trigger privacy protection.',
         'NSAppleEventsUsageDescription': 'Chill Guard needs automation access to hide selected apps when a risk target is detected.',
     },

@@ -3,7 +3,8 @@ import tempfile
 import tkinter as tk
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 import chill_guard_app as app
 from chill_guard_i18n import TEXT
@@ -93,9 +94,50 @@ class WorkspaceTests(unittest.TestCase):
         self.view.ui.update_preview(None)
         self.root.update()
         self.assertTrue(self.view.ui.empty_preview.winfo_ismapped())
+        self.assertFalse(self.view.preview_label.winfo_ismapped())
+        self.view.ui.update_preview(np.ones((360, 640, 3), dtype=np.uint8))
+        self.root.update()
+        self.assertTrue(self.view.preview_label.winfo_ismapped())
+        self.assertFalse(self.view.ui.empty_preview.winfo_ismapped())
         self.view.runtime.running = False
         self.view.set_status("Monitoring stopped")
         self.assertEqual(self.view.status_pill_var.get(), "Standby")
+
+    def test_throttled_monitor_frames_keep_live_preview_without_loading_overlay(self):
+        import numpy as np
+        runtime = self.view.runtime
+        runtime.running = True
+        runtime.set_preview_enabled(True)
+        self.view.preview_var.set(True)
+        frame = np.full((360, 640, 3), 120, dtype=np.uint8)
+        observations = []
+        reads = 0
+
+        def read():
+            nonlocal reads
+            if reads:
+                latest = runtime.get_latest_preview()
+                self.view.ui.update_preview(latest)
+                self.root.update()
+                observations.append((latest is not None, bool(self.view.ui.empty_preview.winfo_ismapped())))
+            reads += 1
+            if reads == 6:
+                runtime.stop_event.set()
+            return True, frame
+
+        camera = Mock()
+        camera.read.side_effect = read
+        detector = SimpleNamespace(detect=lambda *_: [], description="Test detector", notice=None)
+        with patch.object(app.cv2, "VideoCapture", return_value=camera), \
+                patch.object(app, "create_detector", return_value=detector), \
+                patch.object(runtime, "can_publish_preview", side_effect=[True, False, False, True, False, False]):
+            app.monitor_loop(runtime, self.view.set_status)
+        self.assertEqual(observations, [(True, False)] * 5)
+        self.view.ui.update_preview(runtime.get_latest_preview())
+        self.root.update()
+        self.assertTrue(self.view.ui.empty_preview.winfo_ismapped())
+        self.assertFalse(self.view.preview_label.winfo_ismapped())
+        camera.release.assert_called_once()
 
     def test_drawn_button_mouse_and_keyboard_activation_use_same_action(self):
         self.view.switch_settings_panel("parameters")
